@@ -22,8 +22,6 @@ _start:
 	call print
 	call generate_strings
 
-	; call generate_strings
-
 	mov rax, 60
 	mov rdi, 0
 	syscall
@@ -76,6 +74,9 @@ generate:
 	cmp al, '"'
 	je .string
 
+	cmp al, '#'
+	je .comment
+
 	call panic
 
 	.num_literal:
@@ -98,12 +99,33 @@ generate:
 		pop rax
 		je .return_end
 
+		push rax
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_FN
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .function
+
 		lea rax, CALL_FUNCTION_START
 		call print
 		lea rax, LAST_TOKEN
 		call print
 		lea rax, CALL_FUNCTION_END
 		call print
+		jmp .return_ok
+	.function:
+		call consume_space
+		call consume_name
+		lea rax, LAST_TOKEN
+		call print
+		mov al, ':'
+		call putc
+		call print_newline
+		call generate_until_end
+		lea rax, RET_INSTRUCTION
+		call print
+
 		jmp .return_ok
 	.string:
 		call consume_string_literal
@@ -120,7 +142,9 @@ generate:
 		call print
 
 		jmp .return_ok
-
+	.comment:
+		call consume_comment
+		jmp .return_ok
 	.return_ok:
 		pop rbx
 		pop rax
@@ -303,7 +327,6 @@ consume_name:
 ; Modifies CURSOR
 consume_space:
 	push rax
-
 	.loop:
 		call next_char
 		push rax
@@ -311,6 +334,18 @@ consume_space:
 		cmp rax, 1
 		pop rax
 		jne .done
+		call consume_char
+		jmp .loop
+	.done:
+	pop rax
+	ret
+
+consume_comment:
+	push rax
+	.loop:
+		call next_char
+		cmp al, 10
+		je .done
 		call consume_char
 		jmp .loop
 	.done:
@@ -459,6 +494,9 @@ CURSOR dq BUF
 STRINGS_USED dq 0
 
 ; Code generation
+
+RET_INSTRUCTION db "ret", 10, 0
+
 PUSH_INT_START db "sub rcx, 8", 10, "mov qword[rcx], ", 0
 PUSH_INT_END db 10, 0
 

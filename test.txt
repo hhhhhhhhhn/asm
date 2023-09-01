@@ -1,1 +1,4 @@
--12 2 add "12" "1234" end 1
+fn main
+	1 2 3 # This is a comment
+	"wwerwer" -1 name
+end

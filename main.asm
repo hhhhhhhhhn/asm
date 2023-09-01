@@ -1,278 +1,218 @@
 global _start
+extern print
+extern read_stdin_to_buf
+extern putc
+extern print_rax
+extern print_newline
+
 section .text
 _start:
-	lea rax, msg
+	lea rax, BUF
+	mov rbx, BUF_LEN
+	call read_stdin_to_buf
+	cmp rax, -1
+	je panic
+
+	lea rax, BUF
 	call print
 
-	mov rax, -132
-	sub rsp, 32
-	lea rbx, [rsp]
-	call write_signed
-	mov byte[rsp + rax], 0
-	lea rax, [rsp]
+	lea rax, SEPARATOR
 	call print
 
-	mov rax, 10
-	call putc
-
-	lea rax, [rsp]
-	call parse_int
-	lea rbx, [rsp]
-	call write_signed
-	mov byte[rsp + rax], 0
-	lea rax, [rsp]
+	call consume_num
+	lea rax, LAST_TOKEN
 	call print
+	call print_newline
 
-	mov rax, 10
-	call putc
-	
-	mov rdi, rax
+	call consume_space
+	call consume_name
+	lea rax, LAST_TOKEN
+	call print
+	call print_newline
+
 	mov rax, 60
+	mov rdi, 0
 	syscall
 
-; *u8 -> syscall_write_err
-print:
-	push rcx
-	push rdi
-	push rsi
-	push rdx
-
-	mov rsi, rax
-	call strlen
-	mov rdx, rax
-	mov rax, 1 ; syscall write
-	mov rdi, 1 ; stdout
-	syscall
-
-	pop rdx
-	pop rsi
-	pop rdi
-	pop rcx
-	ret
-
-; u8 -> syscall_write_err
-putc:
-	push rcx
-	push rdi
-	push rsi
-	push rdx
-
-	mov byte[rsp-1], al
-	mov rax, 1
-	mov rdi, 1
-	lea rsi, [rsp-1]
-	mov rdx, 1
-	syscall
-
-	pop rdx
-	pop rsi
-	pop rdi
-	pop rcx
-	ret
-
-; u64 (number), *u8 (buffer) -> u64 (written)
-write_hex:
-	push rcx
-
+; void -> void
+; Modifies CURSOR, and sets LAST_TOKEN
+consume_num:
 	push rax
-	call .hex_char
-	mov byte[rbx], al
-	pop rax
+	push rbx
 
-	mov rcx, 1
+	lea rbx, LAST_TOKEN
 	.loop:
-		shl rax, 4
+		call next_char
 		push rax
-		call .hex_char
-		mov byte[rbx + rcx], al
+		call is_num_char
+		cmp rax, 1
 		pop rax
-		inc rcx
-		cmp rcx, 16
-		jl .loop
-	.return:
-		mov rax, 16
-		pop rcx
-		ret
+		jne .done
 
-	.hex_char:
-		shr rax, 60
-		cmp al, 9
-		jle .number
-		jmp .alpha
-		.number:
-			add al, '0'
-			ret
-		.alpha:
-			sub al, 10
-			add al, 'a'
-			ret
-	
-; u64, *u8 -> u64
-write_unsigned:
-	push rdx
-	push rdi
-	push rsi ; buffer
-	
-	mov rsi, rbx
-	mov rbx, 0
-	.loop:
-		mov rdi, 10 ; for division
-		mov rdx, 0 ; for division
-		div rdi
-		add rdx, '0'
-
-		mov rdi, rsp
-		sub rdi, rbx
-		mov byte[rdi], dl
-
+		mov byte[rbx], al
 		inc rbx
-		cmp rax, 0
-		jne .loop
-	.copy_buffer:
-		mov rax, rbx
-		dec rbx
-		.buffer_loop:
-			cmp rbx, 0
-			jl .return
-
-			mov rdi, rsp
-			sub rdi, rbx
-			mov dl, byte[rdi]
-			mov byte[rsi], dl
-
-			inc rsi
-			dec rbx
-			jmp .buffer_loop
-	.return:
-		pop rsi
-		pop rdi
-		pop rdx
-		ret
-
-; i64, *u8 -> u64 (written)
-write_signed:
-	cmp rax, 0
-	jl .invert
-	jmp .write
-	.invert:
-		mov byte[rbx], '-'
-		inc rbx
-		neg rax
-		call write_unsigned
-		inc rax ; for the "-"
-		ret
-	.write:
-		call write_unsigned
-		ret
-
-; *u8 -> u64/i64
-parse_int:
-	push rbx ; digit
-	push rcx ; buffer
-	push rdx ; for division
-	push rdi ; for division
-	push rsi ; isSigned?
-
-	mov rsi, 0
-	cmp byte[rax], '-'
-	jne .nosign
-	.signed:
-		mov rsi, 1
-		inc rax
-	.nosign:
-
-	mov rdi, 10
-	mov rcx, rax
-	mov rax, 0
-	mov rbx, 0
-	.loop:
-		cmp byte[rcx], 0
-		je .return
-
-		mov bl, byte[rcx]
-		sub bl, '0'
-
-		mul rdi
-		add rax, rbx
-		inc rcx
-
+		call consume_char
 		jmp .loop
-	.return:
-		cmp rsi, 1
-		jne .noinvert
-		.invert:
-			neg rax
-		.noinvert:
-		pop rsi
-		pop rdi
-		pop rdx
-		pop rcx
-		pop rbx
-		ret
+	.done:
+	mov byte[rbx], 0
+	pop rbx
+	pop rax
+	ret
 
-; *u8 -> u64
-strlen:
-	push rbx
-	mov rbx, 0
-	.loop:
-		cmp byte[rax], 0
-		je .return
-		inc rbx
-		inc rax
-		jmp .loop
-	.return:
-		mov rax, rbx
-		pop rbx
-		ret
+; u8 -> 1|0 (u64)
+is_num_char:
+	cmp al, '0'
+	jl .not_num
+	cmp al, '9'
+	jg .not_num
+	jmp .yes_num
 
-; *u8, *u8 -> bool
-strcmp:
-	push rcx
-	.loop:
-		cmp byte[rax], 0
-		jne .compare
-		cmp byte[rbx], 0
-		jne .compare
-		jmp .match
-		.compare:
-			mov cl, byte[rbx]
-			cmp byte[rax], cl
-			jne .nomatch
-	.match:
-		mov rax, 1
-		pop rcx
-		ret
-	.nomatch:
+	.not_num:
 		mov rax, 0
-		pop rcx
 		ret
-
-; u64 -> u64
-fib:
-	push rbx
-	push rcx
-
-	cmp rax, 1
-	jle .base
-	jmp .recurse
-	.recurse:
-		mov rcx, rax
-		sub rax, 1
-		call fib
-		mov rbx, rax
-		mov rax, rcx
-		sub rax, 2
-		call fib
-		add rax, rbx
-		jmp .return
-	.base:
+	.yes_num:
 		mov rax, 1
-		jmp .return
-	.return:
-		pop rcx
-		pop rbx
 		ret
+
+; void -> void
+; Modifies CURSOR, and sets LAST_TOKEN
+consume_name:
+	push rax
+	push rbx
+
+	lea rbx, LAST_TOKEN
+	.loop:
+		call next_char
+		push rax
+		call is_alphanum_char
+		cmp rax, 1
+		pop rax
+		jne .done
+
+		mov byte[rbx], al
+		inc rbx
+		call consume_char
+		jmp .loop
+	.done:
+	mov byte[rbx], 0
+	pop rbx
+	pop rax
+	ret
+
+; void -> void
+; Modifies CURSOR
+consume_space:
+	push rax
+
+	.loop:
+		call next_char
+		push rax
+		call is_space_char
+		cmp rax, 1
+		pop rax
+		jne .done
+		call consume_char
+		jmp .loop
+	.done:
+	pop rax
+	ret
+
+consume_string_literal:
+	; TODO: Implement
+	ret
+
+; u8 -> 1|0 (u64)
+is_alpha_char:
+	cmp al, 'a'
+	jl .not_lowercase
+	cmp al, 'z'
+	jg .not_lowercase
+	jmp .is_alpha
+
+	.not_lowercase:
+		cmp al, 'A'
+		jl .not_alpha
+		cmp al, 'Z'
+		jg .not_alpha
+		jmp .is_alpha
+
+	.not_alpha:
+		mov rax, 0
+		ret
+	.is_alpha:
+		mov rax, 1
+		ret
+
+; u8 -> 1|0 (u64)
+is_alphanum_char:
+	push rax
+	call is_alpha_char
+	cmp rax, 1
+	pop rax
+	je .is
+	call is_num_char
+	cmp rax, 1
+	je .is
+	jmp .isnot
+
+	.is:
+		mov rax, 1
+		ret
+	.isnot:
+		mov rax, 0
+		ret
+
+; u8 -> 1|0 (u64)
+is_space_char:
+	cmp al, ' '
+	je .is
+	cmp al, '\t'
+	je .is
+	cmp al, '\n'
+	je .is
+	jmp .is_not
+	.is:
+		mov rax, 1
+		ret
+	.is_not:
+		mov rax, 0
+		ret
+
+; void -> u8
+next_char:
+	mov rax, qword[CURSOR]
+	mov al, byte[rax]
+	ret
+
+; void -> void
+consume_char:
+	push rax
+	mov rax, qword[CURSOR]
+	inc rax
+	mov qword[CURSOR], rax
+	pop rax
+	ret
+
+panic:
+	lea rax, PANICMSG
+	call print
+	mov rax, 60
+	mov rdi, 1
+	syscall
+
+section .bss
+LAST_TOKEN_LEN equ 512
+LAST_TOKEN resb LAST_TOKEN_LEN
+BUF_LEN equ 1024*1024
+BUF resb BUF_LEN
+
 
 section .data
-msg	db "Hello there", 10, 0
-othermsg	db "1", 0
+MSG db "Hello there", 10, 0
+PANICMSG db "PANIC", 10, 0
+SEPARATOR db "==========================================================", 10, 0
+KEYWORD_IF db "if", 0
+KEYWORD_FN db "fn", 0
+KEYWORD_WHILE db "while", 0
+KEYWORD_END db "end", 0
+CURSOR dq BUF

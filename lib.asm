@@ -1,17 +1,6 @@
-global read_stdin_to_buf
-global print
-global putc
-global write_hex
-global write_unsigned
-global write_signed
-global parse_int
-global strlen
-global strcmo
-global print_rax
-global print_newline
-
 section .text
 ; *u8 (buf), u64 (buf size) -> i64 (bytes written, or -1 if buffer wasn't enough)
+global read_stdin_to_buf
 read_stdin_to_buf:
 	push rcx
 	push rdx
@@ -64,6 +53,7 @@ read_stdin_to_buf:
 		ret
 
 ; *u8 -> syscall_write_err
+global print
 print:
 	push rcx
 	push rdi
@@ -84,6 +74,7 @@ print:
 	ret
 
 ; u8 -> syscall_write_err
+global putc
 putc:
 	push rcx
 	push rdi
@@ -104,6 +95,7 @@ putc:
 	ret
 
 ; void -> void
+global print_newline
 print_newline:
 	push rax
 	mov rax, 10
@@ -111,7 +103,25 @@ print_newline:
 	pop rax
 	ret
 
+; u64 -> void
+global print_unsigned
+print_unsigned:
+	push rax
+	push rbx
+	sub rsp, 32
+
+	lea rbx, [rsp]
+	call write_unsigned
+	lea rax, [rsp]
+	call print
+
+	add rsp, 32
+	pop rbx
+	pop rax
+	ret
+
 ; i64 -> void
+global print_rax
 print_rax:
 	push rbx
 	sub rsp, 32
@@ -129,6 +139,7 @@ print_rax:
 	ret
 
 ; u64 (number), *u8 (buffer) -> u64 (written)
+global write_hex
 write_hex:
 	push rcx
 
@@ -166,6 +177,7 @@ write_hex:
 			ret
 
 ; u64, *u8 -> u64
+global write_unsigned
 write_unsigned:
 	push rdx
 	push rdi
@@ -208,6 +220,7 @@ write_unsigned:
 		ret
 
 ; i64, *u8 -> u64 (written)
+global write_signed
 write_signed:
 	cmp rax, 0
 	jl .invert
@@ -223,7 +236,8 @@ write_signed:
 		call write_unsigned
 		ret
 
-; *u8 -> u64/i64
+; *u8 -> i64
+global parse_int
 parse_int:
 	push rbx ; digit
 	push rcx ; buffer
@@ -269,6 +283,7 @@ parse_int:
 		ret
 
 ; *u8 -> u64
+global strlen
 strlen:
 	push rbx
 	mov rbx, 0
@@ -284,6 +299,7 @@ strlen:
 		ret
 
 ; *u8, *u8 -> bool
+global strcmp
 strcmp:
 	push rcx
 	.loop:
@@ -304,5 +320,28 @@ strcmp:
 		mov rax, 0
 		pop rcx
 		ret
+
+; *u8 (dest), *u8 (src) -> void
+global strcpy
+strcpy:
+	push rax
+	push rbx
+	push rcx
+
+	.loop:
+		cmp byte[rbx], 0
+		je .return
+		mov cl, byte[rbx]
+		mov byte[rax], cl
+		inc rax
+		inc rbx
+		jmp .loop
+
+	.return:
+	mov byte[rax], 0
+	pop rcx
+	pop rbx
+	pop rax
+	ret
 
 section .data

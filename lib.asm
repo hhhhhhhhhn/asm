@@ -312,6 +312,9 @@ strcmp:
 			mov cl, byte[rbx]
 			cmp byte[rax], cl
 			jne .nomatch
+			inc rax
+			inc rbx
+			jmp .loop
 	.match:
 		mov rax, 1
 		pop rcx

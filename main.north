@@ -1,0 +1,10 @@
+extern print
+
+fn name
+	"\"`John`\"\n"
+end
+
+global main
+fn main
+	name print
+end

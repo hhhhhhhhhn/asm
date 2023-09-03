@@ -20,7 +20,11 @@ _start:
 
 	lea rax, DATA_SECTION
 	call print
+
 	call generate_strings
+
+	lea rax, STACK
+	call print
 
 	mov rax, 60
 	mov rdi, 0
@@ -107,6 +111,22 @@ generate:
 		pop rax
 		je .function
 
+		push rax
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_EXTERN
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .extern
+
+		push rax
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_GLOBAL
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .global
+
 		lea rax, CALL_FUNCTION_START
 		call print
 		lea rax, LAST_TOKEN
@@ -126,6 +146,24 @@ generate:
 		lea rax, RET_INSTRUCTION
 		call print
 
+		jmp .return_ok
+	.extern:
+		lea rax, EXTERN_INSTRUCTION
+		call print
+		call consume_space
+		call consume_name
+		lea rax, LAST_TOKEN
+		call print
+		call print_newline
+		jmp .return_ok
+	.global:
+		lea rax, GLOBAL_INSTRUCTION
+		call print
+		call consume_space
+		call consume_name
+		lea rax, LAST_TOKEN
+		call print
+		call print_newline
 		jmp .return_ok
 	.string:
 		call consume_string_literal
@@ -360,14 +398,27 @@ consume_string_literal:
 	lea rbx, LAST_TOKEN
 
 	call consume_char ; the '"'
-	mov byte[rbx], '"'
+	mov byte[rbx], '`'
 	inc rbx
 
 	.loop:
-		call next_char
+		call next_two_chars
 		cmp al, '"'
 		je .done
 
+		cmp al, '`'
+		jne .no_backtick
+		mov byte[rbx], '\'
+		inc rbx
+
+		.no_backtick:
+		cmp al, '\'
+		jne .no_escape
+		cmp ah, '"'
+		jne .no_escape
+		call consume_char
+		call next_char
+		.no_escape:
 		call consume_char
 		mov byte[rbx], al
 		inc rbx
@@ -375,7 +426,7 @@ consume_string_literal:
 		jmp .loop
 	.done:
 	call consume_char
-	mov byte[rbx], '"'
+	mov byte[rbx], '`'
 	inc rbx
 	mov byte[rbx], 0
 	pop rbx
@@ -490,12 +541,16 @@ KEYWORD_IF db "if", 0
 KEYWORD_FN db "fn", 0
 KEYWORD_WHILE db "while", 0
 KEYWORD_END db "end", 0
+KEYWORD_EXTERN db "extern", 0
+KEYWORD_GLOBAL db "global", 0
 CURSOR dq BUF
 STRINGS_USED dq 0
 
 ; Code generation
 
 RET_INSTRUCTION db "ret", 10, 0
+EXTERN_INSTRUCTION db "extern ", 0
+GLOBAL_INSTRUCTION db "extern ", 0
 
 PUSH_INT_START db "sub rcx, 8", 10, "mov qword[rcx], ", 0
 PUSH_INT_END db 10, 0
@@ -507,8 +562,9 @@ PUSH_STR_START db "lea rax, STR", 0
 PUSH_STR_END db 10, "sub rcx, 8", 10, "mov qword[rcx], rax", 10, 0
 
 DATA_SECTION db "section .data", 10, 0
+STACK db "section .bss", 10, "STACK resq 1024", 10, 0
 
-HEADER db "global _start", 10, "section .text", 10, "_start:", 10, "call main", 10, "mov rax, 60", 10, "mov rdi, 0", 10, "syscall", 10, 0
+HEADER db "global _start", 10, "section .text", 10, "_start:", 10, "lea rcx, [STACK+1024]", 10, "call main", 10, "mov rax, 60", 10, "mov rdi, 0", 10, "syscall", 10, 0
 
 DATA_STR_START db "STR", 0
 DATA_STR_MIDDLE db " db ", 0

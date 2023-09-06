@@ -1,10 +1,19 @@
-extern print
-
-fn name
-	"\"`John`\"\n"
+# n: u64 -> result: u64
+fn fib
+	dup 1 # n n 1
+	le # n (n<=1)
+	if
+		pop 1 # 1
+	else
+		dup # n n
+		1 sub # n (n-1)
+		fib # n fib(n-1)
+		swap # fib(n-1) n
+		2 sub fib # fib(n-1) fib(n-2)
+		add # fib(n-1) + fib(n-2)
+	end
 end
 
-global main
 fn main
-	name print
+	30 fib printu newline
 end

@@ -16,6 +16,8 @@ _start:
 	lea rax, HEADER
 	call print
 
+	call generate_builtins
+
 	call generate_until_end
 
 	lea rax, DATA_SECTION
@@ -41,7 +43,7 @@ generate_until_end:
 	pop rax
 	ret
 
-; void -> 0|1 (u64, 1 for success, 0 for eof or end) (writes to stdout)
+; void -> 0|1 (u64, 1 for success, 0 for eof, end, or else) (writes to stdout)
 generate:
 	push rax
 	push rbx
@@ -105,6 +107,14 @@ generate:
 
 		push rax
 		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_ELSE
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .return_end
+
+		push rax
+		lea rax, LAST_TOKEN
 		lea rbx, KEYWORD_FN
 		call strcmp
 		cmp rax, 1
@@ -127,6 +137,15 @@ generate:
 		pop rax
 		je .global
 
+		push rax
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_IF
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .if
+
+		; Just a simple call
 		lea rax, CALL_FUNCTION_START
 		call print
 		lea rax, LAST_TOKEN
@@ -146,6 +165,49 @@ generate:
 		lea rax, RET_INSTRUCTION
 		call print
 
+		jmp .return_ok
+	.if:
+		call new_id
+		mov rbx, rax
+		lea rax, CONDITIONAL_JUMP_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, CONDITIONAL_JUMP_END
+		call print
+
+		call generate_until_end
+
+		lea rax, JUMP_TO_IFEND_LABEL_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, JUMP_TO_IFEND_LABEL_END
+		call print
+
+		lea rax, IFELSE_LABEL_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, IFELSE_LABEL_END
+		call print
+
+		push rbx
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_ELSE
+		call strcmp
+		cmp rax, 1
+		pop rbx
+		jne .noelse
+		.else:
+			call generate_until_end
+		.noelse:
+		lea rax, IFEND_LABEL_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, IFEND_LABEL_END
+		call print
 		jmp .return_ok
 	.extern:
 		lea rax, EXTERN_INSTRUCTION
@@ -274,6 +336,33 @@ push_string:
 
 	pop rcx
 	pop rbx
+	ret
+
+generate_builtins:
+	push rax
+	push rbx
+	lea rbx, BUILTINS
+	.loop:
+		mov al, byte[rbx]
+		cmp al, 0
+		je .return
+		cmp al, ' '
+		je .space
+		jmp .normal
+		.space:
+			call print_newline
+			lea rax, EXTERN_INSTRUCTION
+			call print
+			inc rbx
+			jmp .loop
+		.normal:
+			call putc
+			inc rbx
+			jmp .loop
+	.return:
+	call print_newline
+	pop rbx
+	pop rax
 	ret
 
 ; u64 (string index) -> *u8
@@ -507,6 +596,13 @@ next_two_chars:
 	pop rbx
 	ret
 
+; void -> u64
+new_id:
+	mov rax, qword[LAST_ID]
+	inc rax
+	mov qword[LAST_ID], rax
+	ret
+
 ; void -> void
 consume_char:
 	push rax
@@ -539,18 +635,21 @@ PANICMSG db "PANIC", 10, 0
 SEPARATOR db "==========================================================", 10, 0
 KEYWORD_IF db "if", 0
 KEYWORD_FN db "fn", 0
-KEYWORD_WHILE db "while", 0
+KEYWORD_LOOP db "loop", 0
 KEYWORD_END db "end", 0
+KEYWORD_ELSE db "else", 0
 KEYWORD_EXTERN db "extern", 0
 KEYWORD_GLOBAL db "global", 0
 CURSOR dq BUF
 STRINGS_USED dq 0
+LAST_ID dq 0
 
 ; Code generation
+BUILTINS db " dup pop swap prints printu printi newline add sub lt le gt ge dump dumplen", 0 ; the space at the beggining is needed
 
 RET_INSTRUCTION db "ret", 10, 0
 EXTERN_INSTRUCTION db "extern ", 0
-GLOBAL_INSTRUCTION db "extern ", 0
+GLOBAL_INSTRUCTION db "global ", 0
 
 PUSH_INT_START db "sub rcx, 8", 10, "mov qword[rcx], ", 0
 PUSH_INT_END db 10, 0
@@ -561,10 +660,22 @@ CALL_FUNCTION_END db 10, 0
 PUSH_STR_START db "lea rax, STR", 0
 PUSH_STR_END db 10, "sub rcx, 8", 10, "mov qword[rcx], rax", 10, 0
 
+CONDITIONAL_JUMP_START db "mov rax, qword[rcx]", 10, "add rcx, 8", 10, "cmp rax, 0", 10, "je .ifelse", 0
+CONDITIONAL_JUMP_END db 10, 0
+
+JUMP_TO_IFEND_LABEL_START db "jmp .ifend", 0
+JUMP_TO_IFEND_LABEL_END db 10, 0
+
+IFEND_LABEL_START db ".ifend", 0
+IFEND_LABEL_END db ":", 10, 0
+
+IFELSE_LABEL_START db ".ifelse", 0
+IFELSE_LABEL_END db ":", 10, 0
+
 DATA_SECTION db "section .data", 10, 0
 STACK db "section .bss", 10, "STACK resq 1024", 10, 0
 
-HEADER db "global _start", 10, "section .text", 10, "_start:", 10, "lea rcx, [STACK+1024]", 10, "call main", 10, "mov rax, 60", 10, "mov rdi, 0", 10, "syscall", 10, 0
+HEADER db "global _start", 10, "global main", 10, "global STACK", 10, "section .text", 10, "_start:", 10, "lea rcx, [STACK+1024*8]", 10, "call main", 10, "mov rax, 60", 10, "mov rdi, 0", 10, "syscall", 10, 0
 
 DATA_STR_START db "STR", 0
 DATA_STR_MIDDLE db " db ", 0

@@ -4,16 +4,38 @@ fn fib
 	le # n (n<=1)
 	if
 		pop 1 # 1
-	else
-		dup # n n
-		1 sub # n (n-1)
-		fib # n fib(n-1)
-		swap # fib(n-1) n
-		2 sub fib # fib(n-1) fib(n-2)
-		add # fib(n-1) + fib(n-2)
+		return
 	end
+	dup # n n
+	1 sub # n (n-1)
+	fib # n fib(n-1)
+	swap # fib(n-1) n
+	2 sub fib # fib(n-1) fib(n-2)
+	add # fib(n-1) + fib(n-2)
+end
+
+# n: u64 -> sum: u64
+fn sum
+	0 # n sum=0
+	loop
+		over # n sum n
+		add # n (sum+n)
+		swap # (sum+n) n
+		1 sub # (sum+n) (n-1)
+		dup # (sum+n) (n-1) (n-1)
+		0 lt # (sum+n) (n-1) (n-1<0)
+		loop
+			break
+		end
+		if
+			break
+		else
+			swap # (n-1) (sum+n)
+		end
+	end
+	pop
 end
 
 fn main
-	30 fib printu newline
+	10 sum printu "\n" prints
 end

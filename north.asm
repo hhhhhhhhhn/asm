@@ -123,6 +123,14 @@ generate:
 
 		push rax
 		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_RETURN
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .return_keyword
+
+		push rax
+		lea rax, LAST_TOKEN
 		lea rbx, KEYWORD_EXTERN
 		call strcmp
 		cmp rax, 1
@@ -145,6 +153,22 @@ generate:
 		pop rax
 		je .if
 
+		push rax
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_LOOP
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .loop
+
+		push rax
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_BREAK
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .break
+
 		; Just a simple call
 		lea rax, CALL_FUNCTION_START
 		call print
@@ -165,6 +189,53 @@ generate:
 		lea rax, RET_INSTRUCTION
 		call print
 
+		jmp .return_ok
+	.loop:
+		mov rbx, qword[CURRENT_LOOP]
+		push rbx
+		call new_id
+		mov qword[CURRENT_LOOP], rax
+		mov rax, LOOP_HEADER_START
+		call print
+		mov rax, qword[CURRENT_LOOP]
+		call print_unsigned
+		mov rax, LOOP_HEADER_END
+		call print
+		mov rbx, qword[CURRENT_LOOP]
+
+		call generate_until_end
+
+		mov qword[CURRENT_LOOP], rbx
+
+		lea rax, JUMP_TO_LOOP_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, JUMP_TO_LOOP_END
+		call print
+
+		lea rax, BREAK_LABEL_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, BREAK_LABEL_END
+		call print
+
+		pop rbx
+		mov qword[CURRENT_LOOP], rbx
+
+		jmp .return_ok
+	.break:
+		lea rax, BREAK_START
+		call print
+		mov rax, qword[CURRENT_LOOP]
+		call print_unsigned
+		lea rax, BREAK_END
+		call print
+		jmp .return_ok
+	.return_keyword:
+		lea rax, RET_INSTRUCTION
+		call print
 		jmp .return_ok
 	.if:
 		call new_id
@@ -640,12 +711,15 @@ KEYWORD_END db "end", 0
 KEYWORD_ELSE db "else", 0
 KEYWORD_EXTERN db "extern", 0
 KEYWORD_GLOBAL db "global", 0
+KEYWORD_RETURN db "return", 0
+KEYWORD_BREAK db "break", 0
 CURSOR dq BUF
 STRINGS_USED dq 0
 LAST_ID dq 0
+CURRENT_LOOP dq 0
 
 ; Code generation
-BUILTINS db " dup pop swap prints printu printi newline add sub lt le gt ge dump dumplen", 0 ; the space at the beggining is needed
+BUILTINS db " dup over pop swap prints printu printi newline add sub lt le gt ge dump dumplen", 0 ; the space at the beggining is needed
 
 RET_INSTRUCTION db "ret", 10, 0
 EXTERN_INSTRUCTION db "extern ", 0
@@ -662,6 +736,18 @@ PUSH_STR_END db 10, "sub rcx, 8", 10, "mov qword[rcx], rax", 10, 0
 
 CONDITIONAL_JUMP_START db "mov rax, qword[rcx]", 10, "add rcx, 8", 10, "cmp rax, 0", 10, "je .ifelse", 0
 CONDITIONAL_JUMP_END db 10, 0
+
+LOOP_HEADER_START db ".loop", 0
+LOOP_HEADER_END db ":", 10, 0
+
+JUMP_TO_LOOP_START db "jmp .loop", 0
+JUMP_TO_LOOP_END db 10, 0
+
+BREAK_LABEL_START db ".break", 0
+BREAK_LABEL_END db ":", 10, 0
+
+BREAK_START db "jmp .break", 0
+BREAK_END db 10, 0
 
 JUMP_TO_IFEND_LABEL_START db "jmp .ifend", 0
 JUMP_TO_IFEND_LABEL_END db 10, 0

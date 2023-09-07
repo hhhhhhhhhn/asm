@@ -51,6 +51,13 @@ swap:
 	mov qword[rcx+8], rax
 	ret
 
+global over
+over:
+	mov rax, qword[rcx+8]
+	sub rcx, 8
+	mov qword[rcx], rax
+	ret
+
 global printu
 printu:
 	sub rsp, 32

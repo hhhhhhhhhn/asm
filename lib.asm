@@ -112,6 +112,9 @@ print_unsigned:
 
 	lea rbx, [rsp]
 	call write_unsigned
+	lea rbx, [rsp]
+	add rbx, rax
+	mov byte[rbx], 0
 	lea rax, [rsp]
 	call print
 

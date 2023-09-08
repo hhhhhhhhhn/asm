@@ -21,7 +21,7 @@ prints:
 	push rcx
 	mov rax, qword[rcx]
 	mov rsi, rax
-	call strlen
+	call string_len
 	mov rdx, rax
 	mov rax, 1 ; syscall write
 	mov rdi, 1 ; stdout
@@ -49,6 +49,22 @@ swap:
 	mov rbx, qword[rcx+8]
 	mov qword[rcx], rbx
 	mov qword[rcx+8], rax
+	ret
+
+global rot
+rot:
+	mov rax, qword[rcx]
+	mov rbx, qword[rcx+8]
+	mov rdx, qword[rcx+16]
+	mov qword[rcx], rdx
+	mov qword[rcx+8], rax
+	mov qword[rcx+16], rbx
+	ret
+
+global unrot
+unrot:
+	call rot
+	call rot
 	ret
 
 global over
@@ -107,6 +123,31 @@ newline:
 	call prints
 	ret
 
+global eq
+eq:
+	mov rax, qword[rcx + 8]
+	mov rbx, qword[rcx]
+	add rcx, 8
+	cmp rax, rbx
+	je .true
+	mov qword[rcx], 0
+	ret
+	.true:
+	mov qword[rcx], 1
+	ret
+
+global ne
+ne:
+	mov rax, qword[rcx + 8]
+	mov rbx, qword[rcx]
+	add rcx, 8
+	cmp rax, rbx
+	jne .true
+	mov qword[rcx], 0
+	ret
+	.true:
+	mov qword[rcx], 1
+	ret
 
 global lt
 lt:
@@ -184,6 +225,35 @@ dumplen:
 	mov qword[rcx], rbx
 	call printu
 	call newline
+	ret
+
+global syscall
+syscall:
+	push rcx
+	mov rax, qword[rcx + 24]
+	mov rdi, qword[rcx + 16]
+	mov rsi, qword[rcx + 8]
+	mov rdx, qword[rcx]
+	syscall
+	pop rcx
+	add rcx, 3*8
+	mov qword[rcx], rax
+	ret
+
+global syscall7
+syscall7:
+	push rcx
+	mov rax, qword[rcx + 48]
+	mov rdi, qword[rcx + 40]
+	mov rsi, qword[rcx + 32]
+	mov rdx, qword[rcx + 24]
+	mov r10, qword[rcx + 16]
+	mov r8,  qword[rcx + 8]
+	mov r9,  qword[rcx]
+	syscall
+	pop rcx
+	add rcx, 6*8
+	mov qword[rcx], rax
 	ret
 
 dump_rax:
@@ -265,7 +335,15 @@ write_unsigned:
 		pop rdx
 		ret
 
+global strlen
 strlen:
+	mov rax, qword[rcx]
+	call string_len
+	mov qword[rcx], rax
+	ret
+
+; *u8 -> u64
+string_len:
 	push rbx
 	mov rbx, 0
 	.loop:

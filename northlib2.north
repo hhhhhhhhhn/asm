@@ -1,0 +1,52 @@
+global mul
+# a: u64, b: u64 -> product: u64
+fn mul
+	0 # a b sum=0
+	loop
+		# a b sum
+		swap # a sum b
+		dup # a sum b b
+		0 le # a sum b (b<=0)
+		if break end
+		# a sum b
+		swap # a b sum
+		rot # b sum a
+		swap # b a sum
+		over # b a sum a
+		add # b a (sum+a)
+		swap # b (sum+a) a
+		unrot # a b (sum+a)
+		swap # a (sum+a) b
+		1 sub # a (sum+a) (b-1)
+		swap # a (b-1) (sum+a)
+	end
+	rot pop pop
+end
+
+global write
+# string: *u8, file_desc: u64 -> byte_written: u64
+fn write
+	# string file_desc
+	1 unrot # 1 string file_desc
+	swap # 1 file_desc string
+	dup # 1 file_desc string string
+	strlen # 1 file_desc string strlen
+	syscall
+end
+
+global open_file
+# filename: *u8 -> file_desc: u64
+fn open_file
+	2 swap # 2 filename
+	65 # O_WRONLY | O_CREAT
+	0770 # Mode
+	syscall
+end
+
+global close_file
+# file_desc: u64
+fn close_file
+	3 swap # 3 file_desc
+	0 0 # padding args
+	syscall
+end

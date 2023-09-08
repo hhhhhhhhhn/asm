@@ -1,7 +1,6 @@
-global _start
-global main
-global STACK
 section .text
+global _start
+global STACK
 _start:
 lea rcx, [STACK+1024*8]
 call main
@@ -10,6 +9,8 @@ mov rdi, 0
 syscall
 
 extern dup
+extern rot
+extern unrot
 extern over
 extern pop
 extern swap
@@ -23,8 +24,13 @@ extern lt
 extern le
 extern gt
 extern ge
+extern eq
+extern ne
 extern dump
 extern dumplen
+extern syscall
+extern syscall7
+extern strlen
 fib:
 call dup
 sub rcx, 8
@@ -57,6 +63,10 @@ sum:
 sub rcx, 8
 mov qword[rcx], 0
 .loop2:
+.loop3:
+jmp .break3
+jmp .loop3
+.break3:
 call over
 call add
 call swap
@@ -67,10 +77,6 @@ call dup
 sub rcx, 8
 mov qword[rcx], 0
 call lt
-.loop3:
-jmp .break3
-jmp .loop3
-.break3:
 mov rax, qword[rcx]
 add rcx, 8
 cmp rax, 0
@@ -84,17 +90,24 @@ jmp .loop2
 .break2:
 call pop
 ret
+extern write
+extern open_file
+extern close_file
 main:
-sub rcx, 8
-mov qword[rcx], 10
-call sum
-call printu
 lea rax, STR0
 sub rcx, 8
 mov qword[rcx], rax
-call prints
+call open_file
+lea rax, STR1
+sub rcx, 8
+mov qword[rcx], rax
+call over
+call write
+call pop
+call close_file
 ret
 section .data
-STR0 db `\n`, 0
+STR0 db `test.txt`, 0
+STR1 db `UPDATED\n`, 0
 section .bss
 STACK resq 1024

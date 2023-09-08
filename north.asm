@@ -9,12 +9,19 @@ extern strcmp
 extern strcpy
 extern print_unsigned
 
+; If a second argument is provided, it is taken as a library
 section .text
 _start:
 	call read_buf
 
 	lea rax, HEADER
 	call print
+
+	cmp qword[rsp], 2
+	je .islib
+	lea rax, START_LABEL
+	call print
+	.islib:
 
 	call generate_builtins
 
@@ -593,8 +600,11 @@ consume_string_literal:
 	pop rax
 	ret
 
+; NOTE: includes newline
 ; u8 -> 1|0 (u64)
 is_alpha_char:
+	cmp al, '_'
+	je .is_alpha
 	cmp al, 'a'
 	jl .not_lowercase
 	cmp al, 'z'
@@ -719,7 +729,7 @@ LAST_ID dq 0
 CURRENT_LOOP dq 0
 
 ; Code generation
-BUILTINS db " dup over pop swap prints printu printi newline add sub lt le gt ge dump dumplen", 0 ; the space at the beggining is needed
+BUILTINS db " dup rot unrot over pop swap prints printu printi newline add sub lt le gt ge eq ne dump dumplen syscall syscall7 strlen", 0 ; the space at the beggining is needed
 
 RET_INSTRUCTION db "ret", 10, 0
 EXTERN_INSTRUCTION db "extern ", 0
@@ -761,7 +771,8 @@ IFELSE_LABEL_END db ":", 10, 0
 DATA_SECTION db "section .data", 10, 0
 STACK db "section .bss", 10, "STACK resq 1024", 10, 0
 
-HEADER db "global _start", 10, "global main", 10, "global STACK", 10, "section .text", 10, "_start:", 10, "lea rcx, [STACK+1024*8]", 10, "call main", 10, "mov rax, 60", 10, "mov rdi, 0", 10, "syscall", 10, 0
+HEADER db "section .text", 10, 0
+START_LABEL db "global _start", 10, "global STACK", 10, "_start:", 10, "lea rcx, [STACK+1024*8]", 10, "call main", 10, "mov rax, 60", 10, "mov rdi, 0", 10, "syscall", 10, 0
 
 DATA_STR_START db "STR", 0
 DATA_STR_MIDDLE db " db ", 0

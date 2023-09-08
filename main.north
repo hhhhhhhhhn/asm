@@ -18,15 +18,13 @@ end
 fn sum
 	0 # n sum=0
 	loop
+		loop break end # just a test
 		over # n sum n
 		add # n (sum+n)
 		swap # (sum+n) n
 		1 sub # (sum+n) (n-1)
 		dup # (sum+n) (n-1) (n-1)
 		0 lt # (sum+n) (n-1) (n-1<0)
-		loop
-			break
-		end
 		if
 			break
 		else
@@ -36,6 +34,13 @@ fn sum
 	pop
 end
 
+extern write
+extern open_file
+extern close_file
 fn main
-	10 sum printu "\n" prints
+	"test.txt" open_file # fd
+	"UPDATED\n" over # fd string fd
+	write # fd bytes_written
+	pop
+	close_file
 end

@@ -18,6 +18,8 @@ extern prints
 extern printu
 extern printi
 extern newline
+extern set
+extern get
 extern add
 extern sub
 extern mul
@@ -27,6 +29,8 @@ extern gt
 extern ge
 extern eq
 extern ne
+extern band
+extern bor
 extern dump
 extern dumplen
 extern syscall
@@ -95,9 +99,23 @@ extern mmap
 extern munmap
 main:
 sub rcx, 8
-mov qword[rcx], 0b111
-call printi
+mov qword[rcx], 1024
+call mmap
+call dup
+sub rcx, 8
+mov qword[rcx], 10
+sub rcx, 8
+mov qword[rcx], 1024
+call set
+call dup
+sub rcx, 8
+mov qword[rcx], 10
+call get
+call printu
 call newline
+sub rcx, 8
+mov qword[rcx], 1024
+call munmap
 ret
 section .data
 section .bss

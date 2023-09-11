@@ -10,6 +10,8 @@ extern prints
 extern printu
 extern printi
 extern newline
+extern set
+extern get
 extern add
 extern sub
 extern mul
@@ -19,6 +21,8 @@ extern gt
 extern ge
 extern eq
 extern ne
+extern band
+extern bor
 extern dump
 extern dumplen
 extern syscall
@@ -56,17 +60,32 @@ sub rcx, 8
 mov qword[rcx], 0
 call syscall
 ret
+round_up_to_page:
+call dup
+sub rcx, 8
+mov qword[rcx], 0b111111111111
+call band
+sub rcx, 8
+mov qword[rcx], 0
+call ne
+sub rcx, 8
+mov qword[rcx], 4096
+call mul
+call swap
+sub rcx, 8
+mov qword[rcx], 0xfffffffffffff000
+call band
+call add
+ret
 global mmap
 mmap:
+call round_up_to_page
 sub rcx, 8
 mov qword[rcx], 9
 call swap
 sub rcx, 8
 mov qword[rcx], 0
 call swap
-sub rcx, 8
-mov qword[rcx], 4096
-call mul
 sub rcx, 8
 mov qword[rcx], 3
 sub rcx, 8
@@ -82,10 +101,10 @@ munmap:
 sub rcx, 8
 mov qword[rcx], 11
 call unrot
+call round_up_to_page
 sub rcx, 8
 mov qword[rcx], 0
 call syscall
-call pop
 ret
 section .data
 section .bss

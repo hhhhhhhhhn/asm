@@ -26,12 +26,22 @@ fn close_file
 	syscall
 end
 
+# n: u64 -> rounded: u64
+fn round_up_to_page
+	dup 0b1111_1111_1111 # n n 0b1111_1111_1111
+	band 0 ne # n needs_rounding_up?
+	4096 mul # n correction
+	swap # correction n
+	0xfffffffffffff000 band # correction round(n, 4096)
+	add
+end
+
 global mmap
 # pages (how many multiples of 4096 bytes): u64 -> addr: void*
 fn mmap
-	9 swap # SYSCALL_MMAP pages
-	0 swap # SYSCALL_MMAP NULL pages
-	4096 mul # SYSCALL_MMAP NULL pages*4096
+	round_up_to_page # bytes
+	9 swap # SYSCALL_MMAP bytes
+	0 swap # SYSCALL_MMAP NULL bytes
 	3 # PROT_READ | PROT_WRITE
 	34 # MAP_PRIVATE | MAP_ANONYMOUS
 	-1 # fd (ignored)
@@ -40,10 +50,10 @@ fn mmap
 end
 
 global munmap
-# addr: void*, pages: u64 -> void
+# addr: void*, pages: u64 -> status
 fn munmap
 	11 unrot # SYSCALL_MUNMAP addr pages
+	round_up_to_page # SYSCALL_MUNMAP addr bytes
 	0 # Padding
 	syscall
-	pop
 end

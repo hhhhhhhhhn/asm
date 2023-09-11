@@ -36,5 +36,9 @@ end
 
 extern mmap extern munmap
 fn main
-	0b111 printi newline
+	1024 mmap # addr
+	dup 10 1024 set
+	dup 10 get
+	printu newline
+	1024 munmap
 end

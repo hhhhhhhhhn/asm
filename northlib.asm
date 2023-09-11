@@ -25,6 +25,42 @@ mul:
 	mov qword[rcx], rax
 	ret
 
+global band
+band:
+	mov rax, qword[rcx+8]
+	and rax, qword[rcx]
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+global bor
+bor:
+	mov rax, qword[rcx+8]
+	or rax, qword[rcx]
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+global get
+get:
+	mov rax, qword[rcx + 8]
+	mov rbx, qword[rcx]
+	add rax, rbx
+	mov rax, qword[rax]
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+global set
+set:
+	mov rax, qword[rcx + 16]
+	mov rbx, qword[rcx + 8]
+	mov rdx, qword[rcx]
+	add rax, rbx
+	mov qword[rax], rdx
+	add rcx, 24
+	ret
+
 global prints
 prints:
 	push rcx

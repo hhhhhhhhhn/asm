@@ -9,7 +9,7 @@ extern strcmp
 extern strcpy
 extern print_unsigned
 
-; If a second argument is provided, it is taken as a library
+; If a second argument is provided, the program is built like a library
 section .text
 _start:
 	call read_buf
@@ -478,6 +478,8 @@ consume_num:
 		pop rax
 		je .is_valid_char
 		; TODO: Make only second char
+		cmp al, '_'
+		je .continue
 		cmp al, 'a'
 		je .is_valid_char
 		cmp al, 'b'
@@ -497,6 +499,7 @@ consume_num:
 
 		mov byte[rbx], al
 		inc rbx
+		.continue:
 		call consume_char
 		jmp .loop
 	.done:
@@ -748,7 +751,7 @@ CURRENT_LOOP dq 0
 ; Code generation
 
 ; the space at the beggining is needed
-BUILTINS db " dup rot unrot over pop swap prints printu printi newline add sub mul lt le gt ge eq ne dump dumplen syscall syscall7 strlen", 0
+BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen", 0
 
 RET_INSTRUCTION db "ret", 10, 0
 EXTERN_INSTRUCTION db "extern ", 0

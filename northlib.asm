@@ -16,6 +16,15 @@ sub:
 	mov qword[rcx], rax
 	ret
 
+global mul
+mul:
+	mov rax, qword[rcx]
+	mov rbx, qword[rcx+8]
+	mul rbx
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
 global prints
 prints:
 	push rcx
@@ -206,12 +215,13 @@ global dump
 dump:
 	mov rbx, rcx
 	.loop:
+		cmp rbx, STACK + 1024*8
+		jge .break
 		mov rax, qword[rbx]
 		call dump_rax
-
 		add rbx, 8
-		cmp rbx, STACK + 1024*8
-		jl .loop
+		jmp .loop
+	.break:
 	ret
 
 global dumplen

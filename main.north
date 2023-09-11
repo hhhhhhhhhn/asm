@@ -34,13 +34,7 @@ fn sum
 	pop
 end
 
-extern write
-extern open_file
-extern close_file
+extern mmap extern munmap
 fn main
-	"test.txt" open_file # fd
-	"UPDATED\n" over # fd string fd
-	write # fd bytes_written
-	pop
-	close_file
+	0b111 printi newline
 end

@@ -1,28 +1,3 @@
-global mul
-# a: u64, b: u64 -> product: u64
-fn mul
-	0 # a b sum=0
-	loop
-		# a b sum
-		swap # a sum b
-		dup # a sum b b
-		0 le # a sum b (b<=0)
-		if break end
-		# a sum b
-		swap # a b sum
-		rot # b sum a
-		swap # b a sum
-		over # b a sum a
-		add # b a (sum+a)
-		swap # b (sum+a) a
-		unrot # a b (sum+a)
-		swap # a (sum+a) b
-		1 sub # a (sum+a) (b-1)
-		swap # a (b-1) (sum+a)
-	end
-	rot pop pop
-end
-
 global write
 # string: *u8, file_desc: u64 -> byte_written: u64
 fn write
@@ -34,11 +9,11 @@ fn write
 	syscall
 end
 
-global open_file
+global open_file_writing
 # filename: *u8 -> file_desc: u64
-fn open_file
+fn open_file_writing
 	2 swap # 2 filename
-	65 # O_WRONLY | O_CREAT
+	577 # O_WRONLY | O_CREAT | O_TRUNC
 	0770 # Mode
 	syscall
 end
@@ -49,4 +24,26 @@ fn close_file
 	3 swap # 3 file_desc
 	0 0 # padding args
 	syscall
+end
+
+global mmap
+# pages (how many multiples of 4096 bytes): u64 -> addr: void*
+fn mmap
+	9 swap # SYSCALL_MMAP pages
+	0 swap # SYSCALL_MMAP NULL pages
+	4096 mul # SYSCALL_MMAP NULL pages*4096
+	3 # PROT_READ | PROT_WRITE
+	34 # MAP_PRIVATE | MAP_ANONYMOUS
+	-1 # fd (ignored)
+	0 # offset (ignored)
+	syscall7
+end
+
+global munmap
+# addr: void*, pages: u64 -> void
+fn munmap
+	11 unrot # SYSCALL_MUNMAP addr pages
+	0 # Padding
+	syscall
+	pop
 end

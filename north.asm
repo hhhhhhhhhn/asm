@@ -476,7 +476,24 @@ consume_num:
 		call is_num_char
 		cmp rax, 1
 		pop rax
-		jne .done
+		je .is_valid_char
+		; TODO: Make only second char
+		cmp al, 'a'
+		je .is_valid_char
+		cmp al, 'b'
+		je .is_valid_char
+		cmp al, 'c'
+		je .is_valid_char
+		cmp al, 'd'
+		je .is_valid_char
+		cmp al, 'e'
+		je .is_valid_char
+		cmp al, 'f'
+		je .is_valid_char
+		cmp al, 'x'
+		je .is_valid_char
+		jmp .done
+		.is_valid_char:
 
 		mov byte[rbx], al
 		inc rbx
@@ -729,7 +746,9 @@ LAST_ID dq 0
 CURRENT_LOOP dq 0
 
 ; Code generation
-BUILTINS db " dup rot unrot over pop swap prints printu printi newline add sub lt le gt ge eq ne dump dumplen syscall syscall7 strlen", 0 ; the space at the beggining is needed
+
+; the space at the beggining is needed
+BUILTINS db " dup rot unrot over pop swap prints printu printi newline add sub mul lt le gt ge eq ne dump dumplen syscall syscall7 strlen", 0
 
 RET_INSTRUCTION db "ret", 10, 0
 EXTERN_INSTRUCTION db "extern ", 0

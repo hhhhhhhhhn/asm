@@ -20,6 +20,7 @@ extern printi
 extern newline
 extern add
 extern sub
+extern mul
 extern lt
 extern le
 extern gt
@@ -90,24 +91,14 @@ jmp .loop2
 .break2:
 call pop
 ret
-extern write
-extern open_file
-extern close_file
+extern mmap
+extern munmap
 main:
-lea rax, STR0
 sub rcx, 8
-mov qword[rcx], rax
-call open_file
-lea rax, STR1
-sub rcx, 8
-mov qword[rcx], rax
-call over
-call write
-call pop
-call close_file
+mov qword[rcx], 0b111
+call printi
+call newline
 ret
 section .data
-STR0 db `test.txt`, 0
-STR1 db `UPDATED\n`, 0
 section .bss
 STACK resq 1024

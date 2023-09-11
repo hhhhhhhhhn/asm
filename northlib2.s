@@ -12,6 +12,7 @@ extern printi
 extern newline
 extern add
 extern sub
+extern mul
 extern lt
 extern le
 extern gt
@@ -23,42 +24,6 @@ extern dumplen
 extern syscall
 extern syscall7
 extern strlen
-global mul
-mul:
-sub rcx, 8
-mov qword[rcx], 0
-.loop1:
-call swap
-call dup
-sub rcx, 8
-mov qword[rcx], 0
-call le
-mov rax, qword[rcx]
-add rcx, 8
-cmp rax, 0
-je .ifelse2
-jmp .break1
-jmp .ifend2
-.ifelse2:
-.ifend2:
-call swap
-call rot
-call swap
-call over
-call add
-call swap
-call unrot
-call swap
-sub rcx, 8
-mov qword[rcx], 1
-call sub
-call swap
-jmp .loop1
-.break1:
-call rot
-call pop
-call pop
-ret
 global write
 write:
 sub rcx, 8
@@ -69,13 +34,13 @@ call dup
 call strlen
 call syscall
 ret
-global open_file
-open_file:
+global open_file_writing
+open_file_writing:
 sub rcx, 8
 mov qword[rcx], 2
 call swap
 sub rcx, 8
-mov qword[rcx], 65
+mov qword[rcx], 577
 sub rcx, 8
 mov qword[rcx], 0770
 call syscall
@@ -90,6 +55,37 @@ mov qword[rcx], 0
 sub rcx, 8
 mov qword[rcx], 0
 call syscall
+ret
+global mmap
+mmap:
+sub rcx, 8
+mov qword[rcx], 9
+call swap
+sub rcx, 8
+mov qword[rcx], 0
+call swap
+sub rcx, 8
+mov qword[rcx], 4096
+call mul
+sub rcx, 8
+mov qword[rcx], 3
+sub rcx, 8
+mov qword[rcx], 34
+sub rcx, 8
+mov qword[rcx], -1
+sub rcx, 8
+mov qword[rcx], 0
+call syscall7
+ret
+global munmap
+munmap:
+sub rcx, 8
+mov qword[rcx], 11
+call unrot
+sub rcx, 8
+mov qword[rcx], 0
+call syscall
+call pop
 ret
 section .data
 section .bss

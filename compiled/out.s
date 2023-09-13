@@ -37,6 +37,8 @@ extern syscall
 extern syscall7
 extern strlen
 fib:
+push rbp
+mov rbp, rsp
 call dup
 sub rcx, 8
 mov qword[rcx], 1
@@ -48,6 +50,8 @@ je .ifelse1
 call pop
 sub rcx, 8
 mov qword[rcx], 1
+mov rsp, rbp
+pop rbp
 ret
 jmp .ifend1
 .ifelse1:
@@ -63,8 +67,12 @@ mov qword[rcx], 2
 call sub
 call fib
 call add
+mov rsp, rbp
+pop rbp
 ret
 sum:
+push rbp
+mov rbp, rsp
 sub rcx, 8
 mov qword[rcx], 0
 .loop2:
@@ -94,10 +102,72 @@ call swap
 jmp .loop2
 .break2:
 call pop
+mov rsp, rbp
+pop rbp
+ret
+add_test:
+push rbp
+mov rbp, rsp
+sub rsp, 8
+sub rsp, 8
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
+mov rax, qword[rcx]
+mov qword[rsp + 8*1], rax
+add rcx, 8
+sub rcx, 8
+mov rax, qword[rsp + 8*1]
+mov qword[rcx], rax
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+call add
+mov rsp, rbp
+pop rbp
+ret
+main:
+push rbp
+mov rbp, rsp
+sub rsp, 8
+sub rsp, 8
+sub rcx, 8
+mov qword[rcx], 3
+mov rax, qword[rcx]
+mov qword[rsp + 8*1], rax
+add rcx, 8
+sub rcx, 8
+mov qword[rcx], 2
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
+sub rcx, 8
+mov rax, qword[rsp + 8*1]
+mov qword[rcx], rax
+call printu
+call newline
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+call printu
+call newline
+sub rcx, 8
+mov rax, qword[rsp + 8*1]
+mov qword[rcx], rax
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+call add_test
+call printu
+call newline
+mov rsp, rbp
+pop rbp
 ret
 extern mmap
 extern munmap
-main:
+main2:
+push rbp
+mov rbp, rsp
 sub rcx, 8
 mov qword[rcx], 1024
 call mmap
@@ -105,7 +175,8 @@ call dup
 sub rcx, 8
 mov qword[rcx], 10
 sub rcx, 8
-mov qword[rcx], 1024
+mov qword[rcx], 25
+call fib
 call set
 call dup
 sub rcx, 8
@@ -116,6 +187,8 @@ call newline
 sub rcx, 8
 mov qword[rcx], 1024
 call munmap
+mov rsp, rbp
+pop rbp
 ret
 section .data
 section .bss

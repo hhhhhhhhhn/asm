@@ -34,10 +34,27 @@ fn sum
 	pop
 end
 
-extern mmap extern munmap
+fn add_test
+	local first local second
+	!second !first
+
+	?first ?second add
+end
+
 fn main
+	local a local b
+	3 !a
+	2 !b
+
+	?a printu newline
+	?b printu newline
+	?a ?b add_test printu newline
+end
+
+extern mmap extern munmap
+fn main2
 	1024 mmap # addr
-	dup 10 1024 set
+	dup 10 25 fib set
 	dup 10 get
 	printu newline
 	1024 munmap

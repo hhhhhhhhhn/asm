@@ -30,6 +30,8 @@ extern syscall7
 extern strlen
 global write
 write:
+push rbp
+mov rbp, rsp
 sub rcx, 8
 mov qword[rcx], 1
 call unrot
@@ -37,9 +39,13 @@ call swap
 call dup
 call strlen
 call syscall
+mov rsp, rbp
+pop rbp
 ret
 global open_file_writing
 open_file_writing:
+push rbp
+mov rbp, rsp
 sub rcx, 8
 mov qword[rcx], 2
 call swap
@@ -48,9 +54,13 @@ mov qword[rcx], 577
 sub rcx, 8
 mov qword[rcx], 0770
 call syscall
+mov rsp, rbp
+pop rbp
 ret
 global close_file
 close_file:
+push rbp
+mov rbp, rsp
 sub rcx, 8
 mov qword[rcx], 3
 call swap
@@ -59,8 +69,12 @@ mov qword[rcx], 0
 sub rcx, 8
 mov qword[rcx], 0
 call syscall
+mov rsp, rbp
+pop rbp
 ret
 round_up_to_page:
+push rbp
+mov rbp, rsp
 call dup
 sub rcx, 8
 mov qword[rcx], 0b111111111111
@@ -76,9 +90,13 @@ sub rcx, 8
 mov qword[rcx], 0xfffffffffffff000
 call band
 call add
+mov rsp, rbp
+pop rbp
 ret
 global mmap
 mmap:
+push rbp
+mov rbp, rsp
 call round_up_to_page
 sub rcx, 8
 mov qword[rcx], 9
@@ -95,9 +113,13 @@ mov qword[rcx], -1
 sub rcx, 8
 mov qword[rcx], 0
 call syscall7
+mov rsp, rbp
+pop rbp
 ret
 global munmap
 munmap:
+push rbp
+mov rbp, rsp
 sub rcx, 8
 mov qword[rcx], 11
 call unrot
@@ -105,6 +127,8 @@ call round_up_to_page
 sub rcx, 8
 mov qword[rcx], 0
 call syscall
+mov rsp, rbp
+pop rbp
 ret
 section .data
 section .bss

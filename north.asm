@@ -87,6 +87,12 @@ generate:
 	cmp al, '"'
 	je .string
 
+	cmp al, '?'
+	je .var_read
+
+	cmp al, '!'
+	je .var_write
+
 	cmp al, '#'
 	je .comment
 
@@ -154,6 +160,14 @@ generate:
 
 		push rax
 		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_LOCAL
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .local
+
+		push rax
+		lea rax, LAST_TOKEN
 		lea rbx, KEYWORD_IF
 		call strcmp
 		cmp rax, 1
@@ -185,15 +199,15 @@ generate:
 		call print
 		jmp .return_ok
 	.function:
+		call reset_locals
 		call consume_space
 		call consume_name
 		lea rax, LAST_TOKEN
 		call print
-		mov al, ':'
-		call putc
-		call print_newline
+		lea rax, FUNCTION_START
+		call print
 		call generate_until_end
-		lea rax, RET_INSTRUCTION
+		lea rax, FUNCTION_RETURN
 		call print
 
 		jmp .return_ok
@@ -241,7 +255,7 @@ generate:
 		call print
 		jmp .return_ok
 	.return_keyword:
-		lea rax, RET_INSTRUCTION
+		lea rax, FUNCTION_RETURN
 		call print
 		jmp .return_ok
 	.if:
@@ -317,6 +331,49 @@ generate:
 		call print_unsigned
 
 		lea rax, PUSH_STR_END
+		call print
+
+		jmp .return_ok
+	.local:
+		call consume_space
+		call consume_name
+		call push_local_from_last_token
+		lea rax, NEW_LOCAL
+		call print
+		jmp .return_ok
+	.var_read:
+		call consume_char
+		call consume_name
+		lea rax, LAST_TOKEN
+		call get_local_index_from_top
+		cmp rax, -1
+		je panic
+
+		mov rbx, rax
+
+		lea rax, PUSH_LOCAL_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, PUSH_LOCAL_END
+		call print
+
+		jmp .return_ok
+	.var_write:
+		call consume_char
+		call consume_name
+		lea rax, LAST_TOKEN
+		call get_local_index_from_top
+		cmp rax, -1
+		je panic
+
+		mov rbx, rax
+
+		lea rax, WRITE_LOCAL_START
+		call print
+		mov rax, rbx
+		call print_unsigned
+		lea rax, WRITE_LOCAL_END
 		call print
 
 		jmp .return_ok
@@ -645,6 +702,74 @@ is_alpha_char:
 		mov rax, 1
 		ret
 
+; void -> void (changes LOCALS_LEN)
+reset_locals:
+	mov qword[LOCALS_LEN], 0
+	ret
+
+; void (reads LAST_TOKEN) -> void (changes LOCALS and LOCALS_LEN)
+push_local_from_last_token:
+	push rbx
+	push rax
+
+	lea rax, LOCALS
+	mov rbx, qword[LOCALS_LEN]
+	shl rbx, LOCAL_LENGTH
+	add rax, rbx
+
+	lea rbx, LAST_TOKEN
+
+	call strcpy
+
+	mov rbx, qword[LOCALS_LEN]
+	inc rbx
+	mov qword[LOCALS_LEN], rbx
+
+	pop rax
+	pop rbx
+	ret
+
+; *u8 (name) -> i64 (index in LOCALS or -1 if not found)
+get_local_index_from_top:
+	push rbx
+	push rcx
+	push rdx
+
+	mov rdx, 0 ; index
+	.loop:
+		cmp rdx, qword[LOCALS_LEN]
+		jge .return_false
+
+		mov rcx, rdx
+		shl rcx, LOCAL_LENGTH
+		mov rbx, LOCALS
+		add rbx, rcx
+
+		push rax
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .return_true
+
+		inc rdx
+		jmp .loop
+	.return_false:
+		mov rax, -1
+
+		pop rdx
+		pop rcx
+		pop rbx
+		ret
+	.return_true:
+		mov rax, qword[LOCALS_LEN]
+		sub rax, rdx
+		dec rax
+
+		pop rdx
+		pop rcx
+		pop rbx
+		ret
+
 ; u8 -> 1|0 (u64)
 is_alphanum_char:
 	push rax
@@ -720,19 +845,34 @@ panic:
 	mov rdi, 1
 	syscall
 
+unimplemented:
+	lea rax, UNIMPLEMENTED
+	call print
+	mov rax, 60
+	mov rdi, 2
+	syscall
+
 section .bss
 LAST_TOKEN_LEN equ 512
 LAST_TOKEN resb LAST_TOKEN_LEN
 BUF_LEN equ 1024*1024
 BUF resb BUF_LEN
 
+; NOTE: STRING_LENGTH and LOCAL_LENGTH indicate how big a *single* string is
+; in powers of 2
 STRINGS_AMOUNT equ 1024
 STRING_LENGTH equ 10
 STRINGS resb (1 << STRING_LENGTH)*STRINGS_AMOUNT
 
+LOCALS_AMOUNT equ 1024
+LOCAL_LENGTH equ 6
+LOCALS resb (1 << STRING_LENGTH)*STRINGS_AMOUNT
+LOCALS_LEN resq 1
+
 section .data
 MSG db "Hello there", 10, 0
 PANICMSG db "PANIC", 10, 0
+UNIMPLEMENTED db "UNIMPLEMENTED", 10, 0
 SEPARATOR db "==========================================================", 10, 0
 KEYWORD_IF db "if", 0
 KEYWORD_FN db "fn", 0
@@ -742,6 +882,7 @@ KEYWORD_ELSE db "else", 0
 KEYWORD_EXTERN db "extern", 0
 KEYWORD_GLOBAL db "global", 0
 KEYWORD_RETURN db "return", 0
+KEYWORD_LOCAL db "local", 0
 KEYWORD_BREAK db "break", 0
 CURSOR dq BUF
 STRINGS_USED dq 0
@@ -753,7 +894,6 @@ CURRENT_LOOP dq 0
 ; the space at the beggining is needed
 BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen", 0
 
-RET_INSTRUCTION db "ret", 10, 0
 EXTERN_INSTRUCTION db "extern ", 0
 GLOBAL_INSTRUCTION db "global ", 0
 
@@ -765,6 +905,12 @@ CALL_FUNCTION_END db 10, 0
 
 PUSH_STR_START db "lea rax, STR", 0
 PUSH_STR_END db 10, "sub rcx, 8", 10, "mov qword[rcx], rax", 10, 0
+
+PUSH_LOCAL_START db "sub rcx, 8", 10, "mov rax, qword[rsp + 8*", 0
+PUSH_LOCAL_END db "]", 10, "mov qword[rcx], rax", 10, 0
+
+WRITE_LOCAL_START db "mov rax, qword[rcx]", 10, "mov qword[rsp + 8*", 0
+WRITE_LOCAL_END db "], rax", 10, "add rcx, 8", 10, 0
 
 CONDITIONAL_JUMP_START db "mov rax, qword[rcx]", 10, "add rcx, 8", 10, "cmp rax, 0", 10, "je .ifelse", 0
 CONDITIONAL_JUMP_END db 10, 0
@@ -778,8 +924,13 @@ JUMP_TO_LOOP_END db 10, 0
 BREAK_LABEL_START db ".break", 0
 BREAK_LABEL_END db ":", 10, 0
 
+FUNCTION_START db ":", 10, "push rbp", 10, "mov rbp, rsp", 10, 0
+FUNCTION_RETURN db "mov rsp, rbp", 10, "pop rbp", 10, "ret", 10, 0
+
 BREAK_START db "jmp .break", 0
 BREAK_END db 10, 0
+
+NEW_LOCAL db "sub rsp, 8", 10, 0
 
 JUMP_TO_IFEND_LABEL_START db "jmp .ifend", 0
 JUMP_TO_IFEND_LABEL_END db 10, 0

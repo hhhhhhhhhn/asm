@@ -26,6 +26,8 @@ fn close_file
 	syscall
 end
 
+# mmap only works if memory amount is a multiple of 4096 (one page),
+# so this ensures it
 # n: u64 -> rounded: u64
 fn round_up_to_page
 	dup 0b1111_1111_1111 # n n 0b1111_1111_1111

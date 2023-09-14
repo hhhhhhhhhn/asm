@@ -41,14 +41,23 @@ fn add_test
 	?first ?second add
 end
 
-fn main
-	local a local b
-	3 !a
-	2 !b
+struct test
+	a b c
+end
 
-	?a printu newline
-	?b printu newline
-	?a ?b add_test printu newline
+fn main
+	local array
+	4096 test_size mul
+		mmap !array
+
+	local t
+	?array 4095 test_get !t
+
+	?t 12 test_set_a
+	0 !t
+
+	?array 4095 test_get !t
+	?t test_get_a printu newline
 end
 
 extern mmap extern munmap

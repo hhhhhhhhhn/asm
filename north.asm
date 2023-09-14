@@ -190,6 +190,14 @@ generate:
 		pop rax
 		je .break
 
+		push rax
+		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_STRUCT
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .struct
+
 		; Just a simple call
 		lea rax, CALL_FUNCTION_START
 		call print
@@ -376,6 +384,86 @@ generate:
 		lea rax, WRITE_LOCAL_END
 		call print
 
+		jmp .return_ok
+	.struct:
+		call consume_space
+		call consume_name
+
+		push rcx
+		push rdx
+		sub rsp, 128
+		lea rcx, [rsp] ; struct name
+
+		mov rax, rcx
+		lea rbx, LAST_TOKEN
+		call strcpy
+
+		mov rbx, 0 ; index
+		.structloop:
+			call consume_space
+			call consume_name
+			lea rdx, LAST_TOKEN
+
+			push rbx
+			mov rax, rdx
+			lea rbx, KEYWORD_END
+			call strcmp
+			cmp rax, 1
+			pop rbx
+			je .structloopend
+
+			mov rax, rcx
+			call print
+			mov rax, STRUCT_READ_START
+			call print
+			mov rax, rdx
+			call print
+			mov rax, STRUCT_READ_MIDDLE
+			call print
+			mov rax, rbx
+			call print_unsigned
+			mov rax, STRUCT_READ_END
+			call print
+
+			mov rax, rcx
+			call print
+			mov rax, STRUCT_WRITE_START
+			call print
+			mov rax, rdx
+			call print
+			mov rax, STRUCT_WRITE_MIDDLE
+			call print
+			mov rax, rbx
+			call print_unsigned
+			mov rax, STRUCT_WRITE_END
+			call print
+
+			inc rbx
+			jmp .structloop
+		.structloopend:
+		mov rax, rcx
+		call print
+		mov rax, STRUCT_SIZEOF_START
+		call print
+		mov rax, rbx
+		shl rax, 3 ; times 8
+		call print_unsigned
+		lea rax, STRUCT_SIZEOF_END
+		call print
+
+		mov rax, rcx
+		call print
+		mov rax, STRUCT_ARRAY_GET_START
+		call print
+		mov rax, rbx
+		shl rax, 3 ; times 8
+		call print_unsigned
+		lea rax, STRUCT_ARRAY_GET_END
+		call print
+
+		add rsp, 128
+		pop rdx
+		pop rcx
 		jmp .return_ok
 	.comment:
 		call consume_comment
@@ -882,6 +970,7 @@ KEYWORD_ELSE db "else", 0
 KEYWORD_EXTERN db "extern", 0
 KEYWORD_GLOBAL db "global", 0
 KEYWORD_RETURN db "return", 0
+KEYWORD_STRUCT db "struct", 0
 KEYWORD_LOCAL db "local", 0
 KEYWORD_BREAK db "break", 0
 CURSOR dq BUF
@@ -931,6 +1020,20 @@ BREAK_START db "jmp .break", 0
 BREAK_END db 10, 0
 
 NEW_LOCAL db "sub rsp, 8", 10, 0
+
+STRUCT_READ_START db "_get_", 0
+STRUCT_READ_MIDDLE db ":", 10, "mov rax, qword[rcx]", 10, "mov rbx, qword[rax + 8*", 0
+STRUCT_READ_END db "]", 10, "mov qword[rcx], rbx", 10, "ret", 10, 0
+
+STRUCT_WRITE_START db "_set_", 0
+STRUCT_WRITE_MIDDLE db ":", 10, "mov rax, qword[rcx + 8]", 10, "mov rbx, qword[rcx]", 10, "mov qword[rax + 8*", 0
+STRUCT_WRITE_END db "], rbx", 10, "add rcx, 16", 10, "ret", 10, 0
+
+STRUCT_SIZEOF_START db "_size:", 10, "sub rcx, 8", 10, "mov qword[rcx], ", 0
+STRUCT_SIZEOF_END db 10, "ret", 10, 0
+
+STRUCT_ARRAY_GET_START db "_get:", 10, "mov rbx, qword[rcx + 8]", 10, "mov rax, qword[rcx]", 10, "mov rdx, ", 0
+STRUCT_ARRAY_GET_END db 10, "mul rdx", 10, "add rbx, rax", 10, "add rcx, 8", 10, "mov qword[rcx], rbx", 10, "ret", 10, 0
 
 JUMP_TO_IFEND_LABEL_START db "jmp .ifend", 0
 JUMP_TO_IFEND_LABEL_END db 10, 0

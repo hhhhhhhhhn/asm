@@ -126,38 +126,98 @@ call add
 mov rsp, rbp
 pop rbp
 ret
+test_get_a:
+mov rax, qword[rcx]
+mov rbx, qword[rax + 8*0]
+mov qword[rcx], rbx
+ret
+test_set_a:
+mov rax, qword[rcx + 8]
+mov rbx, qword[rcx]
+mov qword[rax + 8*0], rbx
+add rcx, 16
+ret
+test_get_b:
+mov rax, qword[rcx]
+mov rbx, qword[rax + 8*1]
+mov qword[rcx], rbx
+ret
+test_set_b:
+mov rax, qword[rcx + 8]
+mov rbx, qword[rcx]
+mov qword[rax + 8*1], rbx
+add rcx, 16
+ret
+test_get_c:
+mov rax, qword[rcx]
+mov rbx, qword[rax + 8*2]
+mov qword[rcx], rbx
+ret
+test_set_c:
+mov rax, qword[rcx + 8]
+mov rbx, qword[rcx]
+mov qword[rax + 8*2], rbx
+add rcx, 16
+ret
+test_size:
+sub rcx, 8
+mov qword[rcx], 24
+ret
+test_get:
+mov rbx, qword[rcx + 8]
+mov rax, qword[rcx]
+mov rdx, 24
+mul rdx
+add rbx, rax
+add rcx, 8
+mov qword[rcx], rbx
+ret
 main:
 push rbp
 mov rbp, rsp
 sub rsp, 8
+sub rcx, 8
+mov qword[rcx], 4096
+call test_size
+call mul
+call mmap
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
 sub rsp, 8
 sub rcx, 8
-mov qword[rcx], 3
+mov rax, qword[rsp + 8*1]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 4095
+call test_get
 mov rax, qword[rcx]
-mov qword[rsp + 8*1], rax
+mov qword[rsp + 8*0], rax
 add rcx, 8
 sub rcx, 8
-mov qword[rcx], 2
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 12
+call test_set_a
+sub rcx, 8
+mov qword[rcx], 0
 mov rax, qword[rcx]
 mov qword[rsp + 8*0], rax
 add rcx, 8
 sub rcx, 8
 mov rax, qword[rsp + 8*1]
 mov qword[rcx], rax
-call printu
-call newline
+sub rcx, 8
+mov qword[rcx], 4095
+call test_get
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
 sub rcx, 8
 mov rax, qword[rsp + 8*0]
 mov qword[rcx], rax
-call printu
-call newline
-sub rcx, 8
-mov rax, qword[rsp + 8*1]
-mov qword[rcx], rax
-sub rcx, 8
-mov rax, qword[rsp + 8*0]
-mov qword[rcx], rax
-call add_test
+call test_get_a
 call printu
 call newline
 mov rsp, rbp

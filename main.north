@@ -45,26 +45,29 @@ struct test
 	a b c
 end
 
-fn main
-	local array
-	4096 test_size mul
-		mmap !array
-
-	local t
-	?array 4095 test_get !t
-
-	?t 12 test_set_a
-	0 !t
-
-	?array 4095 test_get !t
-	?t test_get_a printu newline
+fn print_stuff
+	dup printu dup printu printu
 end
 
-extern mmap extern munmap
-fn main2
-	1024 mmap # addr
-	dup 10 25 fib set
-	dup 10 get
-	printu newline
-	1024 munmap
+extern arena_new extern arena_destroy extern arena_alloc
+fn main
+	local arena
+	1024 arena_new !arena
+
+	local pointerA local pointerB
+	?arena 100 arena_alloc !pointerA
+	?arena 200 arena_alloc !pointerB
+	?arena 200 arena_alloc pop
+	?arena 200 arena_alloc pop
+	?arena 200 arena_alloc pop
+	?arena 200 arena_alloc pop
+	?arena 200 arena_alloc pop
+
+	?pointerA 10 1111 set
+	?pointerB 10 2222 set
+
+	?pointerA 10 get printu newline
+	?pointerB 10 get printu newline
+
+	?arena arena_destroy
 end

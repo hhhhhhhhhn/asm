@@ -93,6 +93,9 @@ generate:
 	cmp al, '!'
 	je .var_write
 
+	cmp al, '&'
+	je .pointer
+
 	cmp al, '#'
 	je .comment
 
@@ -382,6 +385,17 @@ generate:
 		mov rax, rbx
 		call print_unsigned
 		lea rax, WRITE_LOCAL_END
+		call print
+
+		jmp .return_ok
+	.pointer:
+		call consume_char
+		call consume_name ; TODO: Add support for pointer to local variable
+		lea rax, GET_POINTER_START
+		call print
+		lea rax, LAST_TOKEN
+		call print
+		lea rax, GET_POINTER_END
 		call print
 
 		jmp .return_ok
@@ -981,7 +995,7 @@ CURRENT_LOOP dq 0
 ; Code generation
 
 ; the space at the beggining is needed
-BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen", 0
+BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen call", 0
 
 EXTERN_INSTRUCTION db "extern ", 0
 GLOBAL_INSTRUCTION db "global ", 0
@@ -1037,6 +1051,9 @@ STRUCT_ARRAY_GET_END db 10, "mul rdx", 10, "add rbx, rax", 10, "add rcx, 8", 10,
 
 JUMP_TO_IFEND_LABEL_START db "jmp .ifend", 0
 JUMP_TO_IFEND_LABEL_END db 10, 0
+
+GET_POINTER_START db "sub rcx, 8", 10, "lea rax, ", 0
+GET_POINTER_END db 10, "mov qword[rcx], rax", 10, 0
 
 IFEND_LABEL_START db ".ifend", 0
 IFEND_LABEL_END db ":", 10, 0

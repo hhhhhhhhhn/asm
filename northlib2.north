@@ -39,7 +39,7 @@ fn round_up_to_page
 end
 
 global mmap
-# pages (how many multiples of 4096 bytes): u64 -> addr: void*
+# bytes: u64 -> addr: void*
 fn mmap
 	round_up_to_page # bytes
 	9 swap # SYSCALL_MMAP bytes
@@ -52,10 +52,80 @@ fn mmap
 end
 
 global munmap
-# addr: void*, pages: u64 -> status
+# addr: void*, bytes: u64 -> status
 fn munmap
-	11 unrot # SYSCALL_MUNMAP addr pages
-	round_up_to_page # SYSCALL_MUNMAP addr bytes
+	11 unrot # SYSCALL_MUNMAP addr bytes
+	round_up_to_page # SYSCALL_MUNMAP addr bytes_corrected
 	0 # Padding
 	syscall
+end
+
+struct arena
+	pointer used cap
+end
+
+# capacity -> *allocator
+global arena_new
+fn arena_new
+	local cap local pointer local arena
+	!cap
+	arena_size ?cap add
+		mmap !arena
+	?arena arena_size add !pointer
+
+	?arena 0 arena_set_used
+	?arena ?cap arena_set_cap
+	?arena ?pointer arena_set_pointer
+
+	?arena
+end
+
+# *allocator -> void
+global arena_destroy
+fn arena_destroy
+	local total_allocation local arena
+	!arena
+
+	 arena_size ?arena arena_get_cap add !total_allocation
+
+	 ?arena ?total_allocation munmap
+end
+
+global arena_alloc
+# size: u64 -> void*
+fn arena_alloc
+	local arena local size
+	!size !arena
+
+	local arena_left
+	?arena arena_get_cap ?arena arena_get_used sub !arena_left
+	?size ?arena_left gt
+	if
+		"Not enough memory for arena allocation" panic
+	end
+
+	local result
+	?arena arena_get_pointer ?arena arena_get_used add !result
+
+	?arena
+		?arena arena_get_used ?size add
+			arena_set_used
+
+	?result
+end
+
+global panic
+# message: char* -> !
+fn panic
+	"\033[1;31mPANIC: " 2 write pop
+	2 write pop
+	"\033[0m\n" 2 write pop
+	60 1 0 0 syscall
+end
+
+global error
+fn error
+	"\033[1;31mERROR: " 2 write pop
+	2 write pop
+	"\033[0m\n" 2 write pop
 end

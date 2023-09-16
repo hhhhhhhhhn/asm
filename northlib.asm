@@ -45,6 +45,7 @@ global get
 get:
 	mov rax, qword[rcx + 8]
 	mov rbx, qword[rcx]
+	shl rbx, 3
 	add rax, rbx
 	mov rax, qword[rax]
 	add rcx, 8
@@ -56,6 +57,7 @@ set:
 	mov rax, qword[rcx + 16]
 	mov rbx, qword[rcx + 8]
 	mov rdx, qword[rcx]
+	shl rbx, 3
 	add rax, rbx
 	mov qword[rax], rdx
 	add rcx, 24
@@ -300,6 +302,13 @@ syscall7:
 	pop rcx
 	add rcx, 6*8
 	mov qword[rcx], rax
+	ret
+
+global call
+call:
+	mov rax, qword[rcx]
+	add rcx, 8
+	call rax
 	ret
 
 dump_rax:

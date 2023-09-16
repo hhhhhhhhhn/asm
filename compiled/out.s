@@ -36,6 +36,7 @@ extern dumplen
 extern syscall
 extern syscall7
 extern strlen
+extern call
 fib:
 push rbp
 mov rbp, rsp
@@ -172,81 +173,121 @@ add rbx, rax
 add rcx, 8
 mov qword[rcx], rbx
 ret
+print_stuff:
+push rbp
+mov rbp, rsp
+call dup
+call printu
+call dup
+call printu
+call printu
+mov rsp, rbp
+pop rbp
+ret
+extern arena_new
+extern arena_destroy
+extern arena_alloc
 main:
 push rbp
 mov rbp, rsp
 sub rsp, 8
 sub rcx, 8
-mov qword[rcx], 4096
-call test_size
-call mul
-call mmap
+mov qword[rcx], 1024
+call arena_new
 mov rax, qword[rcx]
 mov qword[rsp + 8*0], rax
 add rcx, 8
 sub rsp, 8
+sub rsp, 8
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 100
+call arena_alloc
+mov rax, qword[rcx]
+mov qword[rsp + 8*1], rax
+add rcx, 8
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 200
+call arena_alloc
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 200
+call arena_alloc
+call pop
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 200
+call arena_alloc
+call pop
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 200
+call arena_alloc
+call pop
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 200
+call arena_alloc
+call pop
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 200
+call arena_alloc
+call pop
 sub rcx, 8
 mov rax, qword[rsp + 8*1]
 mov qword[rcx], rax
-sub rcx, 8
-mov qword[rcx], 4095
-call test_get
-mov rax, qword[rcx]
-mov qword[rsp + 8*0], rax
-add rcx, 8
-sub rcx, 8
-mov rax, qword[rsp + 8*0]
-mov qword[rcx], rax
-sub rcx, 8
-mov qword[rcx], 12
-call test_set_a
-sub rcx, 8
-mov qword[rcx], 0
-mov rax, qword[rcx]
-mov qword[rsp + 8*0], rax
-add rcx, 8
-sub rcx, 8
-mov rax, qword[rsp + 8*1]
-mov qword[rcx], rax
-sub rcx, 8
-mov qword[rcx], 4095
-call test_get
-mov rax, qword[rcx]
-mov qword[rsp + 8*0], rax
-add rcx, 8
-sub rcx, 8
-mov rax, qword[rsp + 8*0]
-mov qword[rcx], rax
-call test_get_a
-call printu
-call newline
-mov rsp, rbp
-pop rbp
-ret
-extern mmap
-extern munmap
-main2:
-push rbp
-mov rbp, rsp
-sub rcx, 8
-mov qword[rcx], 1024
-call mmap
-call dup
 sub rcx, 8
 mov qword[rcx], 10
 sub rcx, 8
-mov qword[rcx], 25
-call fib
+mov qword[rcx], 1111
 call set
-call dup
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 10
+sub rcx, 8
+mov qword[rcx], 2222
+call set
+sub rcx, 8
+mov rax, qword[rsp + 8*1]
+mov qword[rcx], rax
 sub rcx, 8
 mov qword[rcx], 10
 call get
 call printu
 call newline
 sub rcx, 8
-mov qword[rcx], 1024
-call munmap
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 10
+call get
+call printu
+call newline
+sub rcx, 8
+mov rax, qword[rsp + 8*2]
+mov qword[rcx], rax
+call arena_destroy
 mov rsp, rbp
 pop rbp
 ret

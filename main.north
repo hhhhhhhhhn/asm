@@ -49,25 +49,22 @@ fn print_stuff
 	dup printu dup printu printu
 end
 
-extern arena_new extern arena_destroy extern arena_alloc
+extern global_arena_allocator_start extern global_arena_allocator_end
+extern malloc
 fn main
-	local arena
-	1024 arena_new !arena
+	1024 global_arena_allocator_start
+	local pA local pB
+	8 malloc !pA
+	?pA 2 set
+	?pA get printu newline
 
-	local pointerA local pointerB
-	?arena 100 arena_alloc !pointerA
-	?arena 200 arena_alloc !pointerB
-	?arena 200 arena_alloc pop
-	?arena 200 arena_alloc pop
-	?arena 200 arena_alloc pop
-	?arena 200 arena_alloc pop
-	?arena 200 arena_alloc pop
+	8 malloc !pB
+	?pB 7 set
+	?pB get printu newline
 
-	?pointerA 10 1111 set
-	?pointerB 10 2222 set
+	?pA get printu newline
 
-	?pointerA 10 get printu newline
-	?pointerB 10 get printu newline
+	100000 malloc
 
-	?arena arena_destroy
+	global_arena_allocator_end
 end

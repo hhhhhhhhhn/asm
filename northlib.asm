@@ -41,8 +41,8 @@ bor:
 	mov qword[rcx], rax
 	ret
 
-global get
-get:
+global array_get
+array_get:
 	mov rax, qword[rcx + 8]
 	mov rbx, qword[rcx]
 	shl rbx, 3
@@ -52,8 +52,8 @@ get:
 	mov qword[rcx], rax
 	ret
 
-global set
-set:
+global array_set
+array_set:
 	mov rax, qword[rcx + 16]
 	mov rbx, qword[rcx + 8]
 	mov rdx, qword[rcx]
@@ -61,6 +61,21 @@ set:
 	add rax, rbx
 	mov qword[rax], rdx
 	add rcx, 24
+	ret
+
+global get
+get:
+	mov rax, qword[rcx]
+	mov rax, qword[rax]
+	mov qword[rcx], rax
+	ret
+
+global set
+set:
+	mov rax, qword[rcx+8]
+	mov rbx, qword[rcx]
+	mov qword[rax], rbx
+	add rcx, 16
 	ret
 
 global prints

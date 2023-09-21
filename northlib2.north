@@ -60,11 +60,24 @@ fn munmap
 	syscall
 end
 
+space malloc_internal 8
+space free_internal 8
+
+global malloc
+fn malloc
+	&malloc_internal get call
+end
+
+global free
+fn free
+	&free_internal get call
+end
+
 struct arena
 	pointer used cap
 end
 
-# capacity -> *allocator
+# capacity -> *arena
 global arena_new
 fn arena_new
 	local cap local pointer local arena
@@ -80,7 +93,7 @@ fn arena_new
 	?arena
 end
 
-# *allocator -> void
+# *arena -> void
 global arena_destroy
 fn arena_destroy
 	local total_allocation local arena
@@ -92,7 +105,7 @@ fn arena_destroy
 end
 
 global arena_alloc
-# size: u64 -> void*
+# arena: *arena, size: u64 -> void*
 fn arena_alloc
 	local arena local size
 	!size !arena
@@ -113,6 +126,46 @@ fn arena_alloc
 
 	?result
 end
+
+space global_arena 8
+
+# bytes: u64 -> void
+global global_arena_allocator_start
+fn global_arena_allocator_start
+	local bytes
+	!bytes
+
+	&global_arena
+		?bytes arena_new
+			set
+
+	&malloc_internal
+		&global_arena_malloc
+			set
+
+	&free_internal
+		&global_arena_free
+			set
+end
+
+# size: u64 -> void*
+fn global_arena_malloc
+	&global_arena get # size, arena
+	swap # arena, size
+	arena_alloc
+end
+
+# void* -> void
+fn global_arena_free
+	pop
+end
+
+# void -> void
+global global_arena_allocator_end
+fn global_arena_allocator_end
+	&global_arena get arena_destroy
+end
+
 
 global panic
 # message: char* -> !

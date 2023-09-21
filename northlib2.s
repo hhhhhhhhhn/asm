@@ -12,6 +12,8 @@ extern printi
 extern newline
 extern set
 extern get
+extern array_get
+extern array_set
 extern add
 extern sub
 extern mul
@@ -128,6 +130,36 @@ call round_up_to_page
 sub rcx, 8
 mov qword[rcx], 0
 call syscall
+mov rsp, rbp
+pop rbp
+ret
+section .bss
+malloc_internal resb 8
+section .text
+section .bss
+free_internal resb 8
+section .text
+global malloc
+malloc:
+push rbp
+mov rbp, rsp
+sub rcx, 8
+lea rax, malloc_internal
+mov qword[rcx], rax
+call get
+call call
+mov rsp, rbp
+pop rbp
+ret
+global free
+free:
+push rbp
+mov rbp, rsp
+sub rcx, 8
+lea rax, free_internal
+mov qword[rcx], rax
+call get
+call call
 mov rsp, rbp
 pop rbp
 ret
@@ -329,6 +361,73 @@ call arena_set_used
 sub rcx, 8
 mov rax, qword[rsp + 8*0]
 mov qword[rcx], rax
+mov rsp, rbp
+pop rbp
+ret
+section .bss
+global_arena resb 8
+section .text
+global global_arena_allocator_start
+global_arena_allocator_start:
+push rbp
+mov rbp, rsp
+sub rsp, 8
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
+sub rcx, 8
+lea rax, global_arena
+mov qword[rcx], rax
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+call arena_new
+call set
+sub rcx, 8
+lea rax, malloc_internal
+mov qword[rcx], rax
+sub rcx, 8
+lea rax, global_arena_malloc
+mov qword[rcx], rax
+call set
+sub rcx, 8
+lea rax, free_internal
+mov qword[rcx], rax
+sub rcx, 8
+lea rax, global_arena_free
+mov qword[rcx], rax
+call set
+mov rsp, rbp
+pop rbp
+ret
+global_arena_malloc:
+push rbp
+mov rbp, rsp
+sub rcx, 8
+lea rax, global_arena
+mov qword[rcx], rax
+call get
+call swap
+call arena_alloc
+mov rsp, rbp
+pop rbp
+ret
+global_arena_free:
+push rbp
+mov rbp, rsp
+call pop
+mov rsp, rbp
+pop rbp
+ret
+global global_arena_allocator_end
+global_arena_allocator_end:
+push rbp
+mov rbp, rsp
+sub rcx, 8
+lea rax, global_arena
+mov qword[rcx], rax
+call get
+call arena_destroy
 mov rsp, rbp
 pop rbp
 ret

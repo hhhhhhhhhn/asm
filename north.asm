@@ -155,6 +155,14 @@ generate:
 
 		push rax
 		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_SPACE
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .space
+
+		push rax
+		lea rax, LAST_TOKEN
 		lea rbx, KEYWORD_GLOBAL
 		call strcmp
 		cmp rax, 1
@@ -481,6 +489,27 @@ generate:
 		jmp .return_ok
 	.comment:
 		call consume_comment
+		jmp .return_ok
+	.space:
+		lea rax, SPACE_START
+		call print
+
+		call consume_space
+		call consume_name
+		lea rax, LAST_TOKEN
+		call print
+
+		lea rax, SPACE_MIDDLE
+		call print
+
+		call consume_space
+		call consume_num
+		lea rax, LAST_TOKEN
+		call print
+
+		lea rax, SPACE_END
+		call print
+
 		jmp .return_ok
 	.return_ok:
 		pop rbx
@@ -986,6 +1015,7 @@ KEYWORD_GLOBAL db "global", 0
 KEYWORD_RETURN db "return", 0
 KEYWORD_STRUCT db "struct", 0
 KEYWORD_LOCAL db "local", 0
+KEYWORD_SPACE db "space", 0
 KEYWORD_BREAK db "break", 0
 CURSOR dq BUF
 STRINGS_USED dq 0
@@ -995,7 +1025,7 @@ CURRENT_LOOP dq 0
 ; Code generation
 
 ; the space at the beggining is needed
-BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen call", 0
+BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get array_get array_set add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen call", 0
 
 EXTERN_INSTRUCTION db "extern ", 0
 GLOBAL_INSTRUCTION db "global ", 0
@@ -1060,6 +1090,10 @@ IFEND_LABEL_END db ":", 10, 0
 
 IFELSE_LABEL_START db ".ifelse", 0
 IFELSE_LABEL_END db ":", 10, 0
+
+SPACE_START db "section .bss", 10, 0
+SPACE_MIDDLE db " resb ", 0
+SPACE_END db 10, "section .text", 10, 0
 
 DATA_SECTION db "section .data", 10, 0
 STACK db "section .bss", 10, "STACK resq 1024", 10, 0

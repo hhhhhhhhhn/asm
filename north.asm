@@ -1025,7 +1025,7 @@ CURRENT_LOOP dq 0
 ; Code generation
 
 ; the space at the beggining is needed
-BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get array_get array_set add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen call", 0
+BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get array_get array_set get_byte set_byte add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen call", 0
 
 EXTERN_INSTRUCTION db "extern ", 0
 GLOBAL_INSTRUCTION db "global ", 0
@@ -1076,7 +1076,7 @@ STRUCT_WRITE_END db "], rbx", 10, "add rcx, 16", 10, "ret", 10, 0
 STRUCT_SIZEOF_START db "_size:", 10, "sub rcx, 8", 10, "mov qword[rcx], ", 0
 STRUCT_SIZEOF_END db 10, "ret", 10, 0
 
-STRUCT_ARRAY_GET_START db "_get:", 10, "mov rbx, qword[rcx + 8]", 10, "mov rax, qword[rcx]", 10, "mov rdx, ", 0
+STRUCT_ARRAY_GET_START db "_at:", 10, "mov rbx, qword[rcx + 8]", 10, "mov rax, qword[rcx]", 10, "mov rdx, ", 0
 STRUCT_ARRAY_GET_END db 10, "mul rdx", 10, "add rbx, rax", 10, "add rcx, 8", 10, "mov qword[rcx], rbx", 10, "ret", 10, 0
 
 JUMP_TO_IFEND_LABEL_START db "jmp .ifend", 0

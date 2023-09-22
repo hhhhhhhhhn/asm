@@ -78,6 +78,22 @@ set:
 	add rcx, 16
 	ret
 
+global get_byte
+get_byte:
+	mov rax, qword[rcx]
+	mov rbx, 0
+	mov bl, byte[rax]
+	mov qword[rcx], rbx
+	ret
+
+global set_byte
+set_byte:
+	mov rax, qword[rcx+8]
+	mov rbx, qword[rcx]
+	mov byte[rax], bl
+	add rcx, 16
+	ret
+
 global prints
 prints:
 	push rcx

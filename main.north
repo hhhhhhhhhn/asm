@@ -1,70 +1,49 @@
-# n: u64 -> result: u64
-fn fib
-	dup 1 # n n 1
-	le # n (n<=1)
-	if
-		pop 1 # 1
-		return
-	end
-	dup # n n
-	1 sub # n (n-1)
-	fib # n fib(n-1)
-	swap # fib(n-1) n
-	2 sub fib # fib(n-1) fib(n-2)
-	add # fib(n-1) + fib(n-2)
-end
-
-# n: u64 -> sum: u64
-fn sum
-	0 # n sum=0
-	loop
-		loop break end # just a test
-		over # n sum n
-		add # n (sum+n)
-		swap # (sum+n) n
-		1 sub # (sum+n) (n-1)
-		dup # (sum+n) (n-1) (n-1)
-		0 lt # (sum+n) (n-1) (n-1<0)
-		if
-			break
-		else
-			swap # (n-1) (sum+n)
-		end
-	end
-	pop
-end
-
-fn add_test
-	local first local second
-	!second !first
-
-	?first ?second add
-end
+extern global_arena_allocator_start extern global_arena_allocator_end
+extern malloc extern list_new extern list_push_new extern list_get extern list_destroy
+extern list_grow
 
 struct test
 	a b c
 end
 
-fn print_stuff
-	dup printu dup printu printu
-end
-
-extern global_arena_allocator_start extern global_arena_allocator_end
-extern malloc
 fn main
-	1024 global_arena_allocator_start
-	local pA local pB
-	8 malloc !pA
-	?pA 2 set
-	?pA get printu newline
+	1024 1024 mul global_arena_allocator_start
 
-	8 malloc !pB
-	?pB 7 set
-	?pB get printu newline
+	local list
+	test_size list_new !list
 
-	?pA get printu newline
+	?list list_push_new # *test
+	dup 13 test_set_a
+	dup 12 test_set_b
+	    11 test_set_c
 
-	100000 malloc
+	?list list_push_new
+	dup 23 test_set_a
+	dup 22 test_set_b
+	    21 test_set_c
+
+	?list 0 list_get # *test
+	dup test_get_a printu newline
+	dup test_get_b printu newline
+	    test_get_c printu newline newline
+
+	local i
+	0 !i
+	loop
+		?i 2000 ge if
+			break
+		end
+		?list list_push_new pop
+
+		?i 1 add !i
+	end
+
+	?list 1 list_get # *test
+	dup test_get_a printu newline
+	dup test_get_b printu newline
+	    test_get_c printu newline
+
+	?list list_destroy
 
 	global_arena_allocator_end
 end

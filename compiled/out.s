@@ -22,6 +22,8 @@ extern set
 extern get
 extern array_get
 extern array_set
+extern get_byte
+extern set_byte
 extern add
 extern sub
 extern mul
@@ -39,96 +41,14 @@ extern syscall
 extern syscall7
 extern strlen
 extern call
-fib:
-push rbp
-mov rbp, rsp
-call dup
-sub rcx, 8
-mov qword[rcx], 1
-call le
-mov rax, qword[rcx]
-add rcx, 8
-cmp rax, 0
-je .ifelse1
-call pop
-sub rcx, 8
-mov qword[rcx], 1
-mov rsp, rbp
-pop rbp
-ret
-jmp .ifend1
-.ifelse1:
-.ifend1:
-call dup
-sub rcx, 8
-mov qword[rcx], 1
-call sub
-call fib
-call swap
-sub rcx, 8
-mov qword[rcx], 2
-call sub
-call fib
-call add
-mov rsp, rbp
-pop rbp
-ret
-sum:
-push rbp
-mov rbp, rsp
-sub rcx, 8
-mov qword[rcx], 0
-.loop2:
-.loop3:
-jmp .break3
-jmp .loop3
-.break3:
-call over
-call add
-call swap
-sub rcx, 8
-mov qword[rcx], 1
-call sub
-call dup
-sub rcx, 8
-mov qword[rcx], 0
-call lt
-mov rax, qword[rcx]
-add rcx, 8
-cmp rax, 0
-je .ifelse4
-jmp .break2
-jmp .ifend4
-.ifelse4:
-call swap
-.ifend4:
-jmp .loop2
-.break2:
-call pop
-mov rsp, rbp
-pop rbp
-ret
-add_test:
-push rbp
-mov rbp, rsp
-sub rsp, 8
-sub rsp, 8
-mov rax, qword[rcx]
-mov qword[rsp + 8*0], rax
-add rcx, 8
-mov rax, qword[rcx]
-mov qword[rsp + 8*1], rax
-add rcx, 8
-sub rcx, 8
-mov rax, qword[rsp + 8*1]
-mov qword[rcx], rax
-sub rcx, 8
-mov rax, qword[rsp + 8*0]
-mov qword[rcx], rax
-call add
-mov rsp, rbp
-pop rbp
-ret
+extern global_arena_allocator_start
+extern global_arena_allocator_end
+extern malloc
+extern list_new
+extern list_push_new
+extern list_get
+extern list_destroy
+extern list_grow
 test_get_a:
 mov rax, qword[rcx]
 mov rbx, qword[rax + 8*0]
@@ -166,7 +86,7 @@ test_size:
 sub rcx, 8
 mov qword[rcx], 24
 ret
-test_get:
+test_at:
 mov rbx, qword[rcx + 8]
 mov rax, qword[rcx]
 mov rdx, 24
@@ -175,73 +95,127 @@ add rbx, rax
 add rcx, 8
 mov qword[rcx], rbx
 ret
-print_stuff:
-push rbp
-mov rbp, rsp
-call dup
-call printu
-call dup
-call printu
-call printu
-mov rsp, rbp
-pop rbp
-ret
-extern global_arena_allocator_start
-extern global_arena_allocator_end
-extern malloc
 main:
 push rbp
 mov rbp, rsp
 sub rcx, 8
 mov qword[rcx], 1024
+sub rcx, 8
+mov qword[rcx], 1024
+call mul
 call global_arena_allocator_start
 sub rsp, 8
-sub rsp, 8
-sub rcx, 8
-mov qword[rcx], 8
-call malloc
-mov rax, qword[rcx]
-mov qword[rsp + 8*1], rax
-add rcx, 8
-sub rcx, 8
-mov rax, qword[rsp + 8*1]
-mov qword[rcx], rax
-sub rcx, 8
-mov qword[rcx], 2
-call set
-sub rcx, 8
-mov rax, qword[rsp + 8*1]
-mov qword[rcx], rax
-call get
-call printu
-call newline
-sub rcx, 8
-mov qword[rcx], 8
-call malloc
+call test_size
+call list_new
 mov rax, qword[rcx]
 mov qword[rsp + 8*0], rax
 add rcx, 8
 sub rcx, 8
 mov rax, qword[rsp + 8*0]
 mov qword[rcx], rax
+call list_push_new
+call dup
 sub rcx, 8
-mov qword[rcx], 7
-call set
+mov qword[rcx], 13
+call test_set_a
+call dup
+sub rcx, 8
+mov qword[rcx], 12
+call test_set_b
+sub rcx, 8
+mov qword[rcx], 11
+call test_set_c
 sub rcx, 8
 mov rax, qword[rsp + 8*0]
 mov qword[rcx], rax
-call get
+call list_push_new
+call dup
+sub rcx, 8
+mov qword[rcx], 23
+call test_set_a
+call dup
+sub rcx, 8
+mov qword[rcx], 22
+call test_set_b
+sub rcx, 8
+mov qword[rcx], 21
+call test_set_c
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 0
+call list_get
+call dup
+call test_get_a
+call printu
+call newline
+call dup
+call test_get_b
+call printu
+call newline
+call test_get_c
+call printu
+call newline
+call newline
+sub rsp, 8
+sub rcx, 8
+mov qword[rcx], 0
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
+.loop1:
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 2000
+call ge
+mov rax, qword[rcx]
+add rcx, 8
+cmp rax, 0
+je .ifelse2
+jmp .break1
+jmp .ifend2
+.ifelse2:
+.ifend2:
+sub rcx, 8
+mov rax, qword[rsp + 8*1]
+mov qword[rcx], rax
+call list_push_new
+call pop
+sub rcx, 8
+mov rax, qword[rsp + 8*0]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 1
+call add
+mov rax, qword[rcx]
+mov qword[rsp + 8*0], rax
+add rcx, 8
+jmp .loop1
+.break1:
+sub rcx, 8
+mov rax, qword[rsp + 8*1]
+mov qword[rcx], rax
+sub rcx, 8
+mov qword[rcx], 1
+call list_get
+call dup
+call test_get_a
+call printu
+call newline
+call dup
+call test_get_b
+call printu
+call newline
+call test_get_c
 call printu
 call newline
 sub rcx, 8
 mov rax, qword[rsp + 8*1]
 mov qword[rcx], rax
-call get
-call printu
-call newline
-sub rcx, 8
-mov qword[rcx], 100000
-call malloc
+call list_destroy
 call global_arena_allocator_end
 mov rsp, rbp
 pop rbp

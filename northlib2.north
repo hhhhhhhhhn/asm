@@ -176,9 +176,124 @@ fn panic
 	60 1 0 0 syscall
 end
 
+# message: char* -> void
 global error
 fn error
 	"\033[1;31mERROR: " 2 write pop
 	2 write pop
 	"\033[0m\n" 2 write pop
+end
+
+global todo
+fn todo
+	"\033[1;35m" 2 write pop
+	2 write pop
+	"\033[0m\n" 2 write pop
+	60 2 0 0 syscall
+end
+
+struct list
+	buffer used cap element_size
+end
+
+
+global list_new
+# element_size: u64 -> list*
+fn list_new local element_size
+	!element_size
+
+	local list
+	list_size malloc !list
+
+	local buffer
+	64 ?element_size mul malloc !buffer
+
+	?list 64            list_set_cap
+	?list 0             list_set_used
+	?list ?element_size list_set_element_size
+	?list ?buffer       list_set_buffer
+
+	?list
+end
+
+global list_destroy
+# list* -> void
+fn list_destroy local list
+	!list
+
+	?list list_get_buffer free
+	?list free
+end
+
+global list_push_new
+# list* -> list_element*
+fn list_push_new local list
+	!list
+
+	?list list_get_used ?list list_get_cap eq
+	if
+		?list list_grow
+	end
+
+	local pointer
+	?list list_get_used ?list list_get_element_size mul
+		?list list_get_buffer add
+			!pointer
+
+	?list
+		?list list_get_used 1 add
+			list_set_used
+
+	?pointer
+end
+
+# list* -> void
+global list_grow
+fn list_grow local list
+	!list
+
+	local bytes
+	?list list_get_element_size ?list list_get_used mul
+		!bytes
+
+	?list
+		?list list_get_cap 2 mul
+			list_set_cap
+
+	local new_buffer
+	?bytes 2 mul malloc !new_buffer
+
+	?new_buffer ?list list_get_buffer ?bytes memcpy
+
+	?list list_get_buffer free
+	?list ?new_buffer list_set_buffer
+end
+
+global memcpy
+# dest: u8*, src: u8*, size: u64 -> void
+fn memcpy local dest local src local size
+	!size !src !dest
+
+	local i
+	0 !i
+
+	local byte
+
+	loop
+		?i ?size ge if break end
+
+		?src ?i add get_byte !byte
+		?dest ?i add ?byte set_byte
+
+		?i 1 add !i
+	end
+end
+
+global list_get
+# list*, index: u64 -> element*
+fn list_get local list local index
+	!index !list
+
+	?index ?list list_get_element_size mul
+		?list list_get_buffer add
 end

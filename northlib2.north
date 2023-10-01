@@ -9,6 +9,46 @@ fn write
 	syscall
 end
 
+global read
+# file_desc: u64, buffer: *u8, bytes: u64 -> bytes_read
+fn read local file_desc local buffer local bytes
+	!bytes !buffer !file_desc
+
+	0 # syscall_read
+	?file_desc
+	?buffer
+	?bytes
+	syscall
+end
+
+global read_all_to_string
+# file_desc: u64 -> char*
+fn read_all_to_string local file_desc
+	!file_desc
+
+	local buffer
+	128 malloc !buffer
+	local builder
+	string_builder_new !builder
+
+	local bytes_read
+	loop
+		?file_desc ?buffer 127 read !bytes_read  # leave space for null
+
+		?bytes_read 0 le if
+			break
+		end
+
+		?buffer ?bytes_read add 0 set_byte
+
+		?builder ?buffer string_builder_write
+	end
+
+	?buffer free
+
+	?builder string_builder_finish
+end
+
 global open_file_writing
 # filename: *u8 -> file_desc: u64
 fn open_file_writing
@@ -296,4 +336,125 @@ fn list_get local list local index
 
 	?index ?list list_get_element_size mul
 		?list list_get_buffer add
+end
+
+# str: char* -> char*
+global string_clone
+fn string_clone local src
+	!src
+
+	local length
+	?src strlen 1 add !length # The extra one is for the null
+
+	local clone
+	?length malloc !clone
+
+	?clone ?src ?length memcpy
+
+	?clone
+end
+
+struct string_builder
+	buffer used cap
+end
+
+global string_builder_new
+# void -> string_builder*
+fn string_builder_new
+	local builder
+	string_builder_size malloc !builder
+
+	?builder 0 string_builder_set_used
+	?builder 64 string_builder_set_cap
+
+	?builder 60 malloc string_builder_set_buffer
+
+	?builder
+end
+
+# string_builder*, char* -> void
+global string_builder_write
+fn string_builder_write local builder local str
+	!str !builder
+
+	local length
+	?str strlen !length
+
+	?builder string_builder_get_used ?length add
+		?builder string_builder_get_cap
+			gt
+	if
+		?builder string_builder_grow
+		?builder ?str string_builder_write
+		return
+	end
+
+	?builder string_builder_get_buffer ?builder string_builder_get_used add
+		?str
+			?length
+				memcpy
+
+	?builder
+		?builder string_builder_get_used ?length add
+			string_builder_set_used
+end
+
+global string_builder_push
+# string_builder*, char -> void
+fn string_builder_push local builder local char
+	!char !builder
+
+	?builder string_builder_get_used 1 add
+		?builder string_builder_get_cap
+			gt
+	if
+		?builder string_builder_grow
+	end
+
+	?builder string_builder_get_buffer ?builder string_builder_get_used add
+		?char
+			set_byte
+
+	?builder
+		?builder string_builder_get_used 1 add
+			string_builder_set_used
+end
+
+global string_builder_finish
+# string_builder* -> char*
+fn string_builder_finish local builder
+	!builder
+
+	?builder 0 string_builder_push
+
+	local str
+	?builder string_builder_get_buffer !str
+
+	?builder free
+
+	?str
+end
+
+# string_builder* -> void
+fn string_builder_grow local builder
+	!builder
+
+	local new_bytes
+	?builder string_builder_get_cap 2 mul !new_bytes
+
+	local new_buffer
+	?new_bytes malloc !new_buffer
+
+	local old_buffer
+	?builder string_builder_get_buffer !old_buffer
+
+	?new_buffer
+		?old_buffer
+			?builder string_builder_get_used
+				memcpy
+
+	?old_buffer free
+
+	?builder ?new_bytes string_builder_set_cap
+	?builder ?new_buffer string_builder_set_buffer
 end

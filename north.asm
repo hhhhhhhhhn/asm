@@ -87,6 +87,9 @@ generate:
 	cmp al, '"'
 	je .string
 
+	cmp al, "'"
+	je .char_literal
+
 	cmp al, '?'
 	je .var_read
 
@@ -103,6 +106,15 @@ generate:
 
 	.num_literal:
 		call consume_num
+		lea rax, PUSH_INT_START
+		call print
+		lea rax, LAST_TOKEN
+		call print
+		lea rax, PUSH_INT_END
+		call print
+		jmp .return_ok
+	.char_literal:
+		call consume_char_literal
 		lea rax, PUSH_INT_START
 		call print
 		lea rax, LAST_TOKEN
@@ -641,6 +653,28 @@ get_string:
 	mov rax, rbx
 
 	pop rbx
+	ret
+
+; void -> void
+; Modifies CURSOR, and sets LAST_TOKEN
+consume_char_literal:
+	push rax
+
+	call next_char
+	mov byte[LAST_TOKEN], al
+	call consume_char
+
+	call next_char
+	mov byte[LAST_TOKEN+1], al
+	call consume_char
+
+	call next_char
+	mov byte[LAST_TOKEN+2], al
+	call consume_char
+
+	mov byte[LAST_TOKEN+3], 0
+
+	pop rax
 	ret
 
 ; void -> void

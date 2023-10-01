@@ -1,0 +1,34 @@
+struct name {
+	a: type
+	b: type
+};
+
+@include("function.XXXXXXXXXXX")
+
+# Implementation
+fn main(a: type, b: type): type, type {
+	assert(function(a, b) == a:function(b));
+};
+
+# Declaration, order does not matter, we do not typecheck
+fn main(a: type, b: type): type;
+
+# This mangles into main___type__type___type__type
+# a.k.a. (name)___(args)___(return)
+
+# Function parameters/returns work with a separate stack, similar to north
+# When a function is called, it pops the arguments from this stack and pushes
+# them into the local stack, and the returns are pushed into this stack as well.
+# This allows for variable sized returns
+
+
+# Traits
+trait add(a, b): c, d
+
+fn add_test() {
+	assert(add(1, 2) == (a + b));
+	assert(1:add(2) == (a + b));
+
+    # 1 + 2 * 3 is invalid syntax, it has to be 1 + (2 * 3)
+    # no operator precedence
+}

@@ -2,48 +2,19 @@ extern global_arena_allocator_start extern global_arena_allocator_end
 extern malloc extern list_new extern list_push_new extern list_get extern list_destroy
 extern list_grow
 
-struct test
-	a b c
+struct token
+	type
+	value
 end
 
+extern string_builder_new
+extern string_builder_finish
+extern string_builder_push
+extern read_all_to_string
 fn main
 	1024 1024 mul global_arena_allocator_start
 
-	local list
-	test_size list_new !list
-
-	?list list_push_new # *test
-	dup 13 test_set_a
-	dup 12 test_set_b
-	    11 test_set_c
-
-	?list list_push_new
-	dup 23 test_set_a
-	dup 22 test_set_b
-	    21 test_set_c
-
-	?list 0 list_get # *test
-	dup test_get_a printu newline
-	dup test_get_b printu newline
-	    test_get_c printu newline newline
-
-	local i
-	0 !i
-	loop
-		?i 2000 ge if
-			break
-		end
-		?list list_push_new pop
-
-		?i 1 add !i
-	end
-
-	?list 1 list_get # *test
-	dup test_get_a printu newline
-	dup test_get_b printu newline
-	    test_get_c printu newline
-
-	?list list_destroy
+	0 read_all_to_string prints
 
 	global_arena_allocator_end
 end

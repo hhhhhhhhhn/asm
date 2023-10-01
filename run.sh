@@ -2,7 +2,7 @@
 
 set -xe
 
-mkdir compiled || true
+mkdir compiled 2>/dev/null || true
 
 nasm -g -f elf64 lib.asm -o compiled/lib.o
 nasm -g -f elf64 north.asm -o compiled/north.o

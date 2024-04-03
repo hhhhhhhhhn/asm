@@ -1,5 +1,9 @@
 extern global_arena_allocator_start extern global_arena_allocator_end
 extern malloc extern list_new extern list_push_new extern list_get extern list_destroy
+extern string_builder_new
+extern string_builder_finish
+extern string_builder_push
+extern read_all_to_string
 extern list_grow
 
 struct token
@@ -7,14 +11,197 @@ struct token
 	value
 end
 
-extern string_builder_new
-extern string_builder_finish
-extern string_builder_push
-extern read_all_to_string
+space tokens 8
+
+# type: u64, value: void* -> void
+fn push_token local type local value
+	!value !type
+
+	local token
+	token_size malloc !token
+
+	?token ?type  token_set_type
+	?token ?value token_set_value
+end
+
+space input  8
+space index  8
+space length 8
+
+fn NUMBER 10 end
+fn STRING 11 end
+fn IDENT  12 end
+fn IF     13 end
+fn ELSEIF 14 end
+fn ELSE   15 end
+fn LOOP   16 end
+
+# void -> char
+fn peek_char
+	&index get &length get ge if
+		0 return
+	end
+
+	&input get
+		&index get
+			add
+				get_byte
+end
+
+fn peek_2_chars
+	peek_char
+	consume_char peek_char
+
+	&index
+		&index get 1 sub
+			set
+end
+
+# void -> void (changes index)
+fn consume_char
+	&index
+		&index get 1 add
+			set
+end
+
+
+# char -> bool
+fn is_alpha local char
+	!char
+
+	?char 'a' ge
+		?char 'z' le
+			band
+	?char 'A' ge
+		?char 'Z' le
+			band
+				bor
+end
+
+# char -> bool
+fn is_num local char
+	!char
+
+	?char '0' ge
+		?char '9' le
+			band
+end
+
+# char -> bool
+fn is_whitespace local char
+	!char
+
+	?char 10 eq
+		?char ' ' eq bor
+			?char 0 eq bor
+end
+
+# void -> void
+fn consume_whitespace
+	loop
+		peek_char is_whitespace not if
+			break
+		end
+		consume_char
+	end
+end
+
+# void -> i64
+fn consume_number
+	local sign
+	1 !sign
+
+	peek_char '-' eq if
+		-1 !sign
+		consume_char
+	end
+
+	local num
+	0 !num
+
+	local char
+	loop
+		peek_char !char
+
+		?char is_num if
+			?num 10 mul !num
+			?num
+				?char '0' sub
+					add !num
+			consume_char
+			continue
+		end
+		?char '_' eq if
+			consume_char
+			continue
+		end
+		break
+	end
+
+	?num ?sign mul
+end
+
+# void -> char*
+fn consume_ident
+	local builder
+	string_builder_new !builder
+
+	local char
+	loop
+		peek_char !char
+
+		?char is_alpha ?char is_num bor ?char '_' eq bor if
+			?builder ?char string_builder_push
+			consume_char
+			continue
+		end
+		break
+	end
+
+	local str
+	?builder string_builder_finish !str
+
+	?str
+end
+
+# void -> token*
+fn consume_token
+	consume_whitespace
+
+	local char local next_char
+	peek_2_chars !next_char !char
+
+	?char is_alpha if
+		consume_ident prints newline return
+	end
+	?char is_num if
+		consume_number printi newline return
+	end
+	?char '-' eq
+		?next_char is_num
+			band if
+				consume_number printi newline return
+	end
+
+	"SYNTAX ERRROR\n" prints
+end
+
 fn main
 	1024 1024 mul global_arena_allocator_start
 
-	0 read_all_to_string prints
+	&tokens
+		token_size list_new
+			set
+
+	&input
+		0 read_all_to_string
+			set
+	&length
+		&input get strlen
+			set
+	&index 0 set
+
+	consume_token
 
 	global_arena_allocator_end
 end

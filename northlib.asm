@@ -41,6 +41,25 @@ bor:
 	mov qword[rcx], rax
 	ret
 
+global bnot
+bnot:
+	mov rax, qword[rcx]
+	not rax
+	mov qword[rcx], rax
+	ret
+
+global not
+not:
+	mov rax, qword[rcx]
+	cmp rax, 0
+	je .zero
+	.notzero:
+		mov qword[rcx], 0
+		ret
+	.zero:
+		mov qword[rcx], 1
+		ret
+
 global array_get
 array_get:
 	mov rax, qword[rcx + 8]
@@ -101,6 +120,19 @@ prints:
 	mov rsi, rax
 	call string_len
 	mov rdx, rax
+	mov rax, 1 ; syscall write
+	mov rdi, 1 ; stdout
+	syscall
+
+	pop rcx
+	add rcx, 8
+	ret
+
+global printc
+printc:
+	push rcx
+	lea rsi, qword[rcx]
+	mov rdx, 1
 	mov rax, 1 ; syscall write
 	mov rdi, 1 ; stdout
 	syscall

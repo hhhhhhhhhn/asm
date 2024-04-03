@@ -215,6 +215,14 @@ generate:
 
 		push rax
 		lea rax, LAST_TOKEN
+		lea rbx, KEYWORD_CONTINUE
+		call strcmp
+		cmp rax, 1
+		pop rax
+		je .continue
+
+		push rax
+		lea rax, LAST_TOKEN
 		lea rbx, KEYWORD_STRUCT
 		call strcmp
 		cmp rax, 1
@@ -283,6 +291,14 @@ generate:
 		mov rax, qword[CURRENT_LOOP]
 		call print_unsigned
 		lea rax, BREAK_END
+		call print
+		jmp .return_ok
+	.continue:
+		lea rax, JUMP_TO_LOOP_START
+		call print
+		mov rax, qword[CURRENT_LOOP]
+		call print_unsigned
+		lea rax, JUMP_TO_LOOP_END
 		call print
 		jmp .return_ok
 	.return_keyword:
@@ -1051,6 +1067,7 @@ KEYWORD_STRUCT db "struct", 0
 KEYWORD_LOCAL db "local", 0
 KEYWORD_SPACE db "space", 0
 KEYWORD_BREAK db "break", 0
+KEYWORD_CONTINUE db "continue", 0
 CURSOR dq BUF
 STRINGS_USED dq 0
 LAST_ID dq 0
@@ -1059,7 +1076,7 @@ CURRENT_LOOP dq 0
 ; Code generation
 
 ; the space at the beggining is needed
-BUILTINS db " dup rot unrot over pop swap prints printu printi newline set get array_get array_set get_byte set_byte add sub mul lt le gt ge eq ne band bor dump dumplen syscall syscall7 strlen call", 0
+BUILTINS db " dup rot unrot over pop swap prints printu printi printc newline set get array_get array_set get_byte set_byte add sub mul lt le gt ge eq ne band bor bnot not dump dumplen syscall syscall7 strlen call", 0
 
 EXTERN_INSTRUCTION db "extern ", 0
 GLOBAL_INSTRUCTION db "global ", 0

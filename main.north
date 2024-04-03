@@ -1,5 +1,5 @@
 extern global_arena_allocator_start extern global_arena_allocator_end
-extern malloc extern list_new extern list_push_new extern list_get extern list_destroy
+extern malloc extern list_new extern list_push_new extern list_get extern list_destroy extern list_used
 extern string_builder_new
 extern string_builder_finish
 extern string_builder_push
@@ -18,7 +18,7 @@ fn push_token local type local value
 	!value !type
 
 	local token
-	token_size malloc !token
+	&tokens get list_push_new !token
 
 	?token ?type  token_set_type
 	?token ?value token_set_value
@@ -28,13 +28,13 @@ space input  8
 space index  8
 space length 8
 
-fn NUMBER 10 end
-fn STRING 11 end
-fn IDENT  12 end
-fn IF     13 end
-fn ELSEIF 14 end
-fn ELSE   15 end
-fn LOOP   16 end
+fn NUMBER 10  end
+fn STRING 11  end
+fn IDENT  12  end
+fn IF     101 end # keywords > 100
+fn ELSEIF 102 end
+fn ELSE   103 end
+fn LOOP   104 end
 
 # void -> char
 fn peek_char
@@ -106,7 +106,7 @@ fn consume_whitespace
 	end
 end
 
-# void -> i64
+# void -> void
 fn consume_number
 	local sign
 	1 !sign
@@ -139,9 +139,12 @@ fn consume_number
 	end
 
 	?num ?sign mul
+		!num
+
+	NUMBER ?num push_token
 end
 
-# void -> char*
+# void -> void
 fn consume_ident
 	local builder
 	string_builder_new !builder
@@ -161,7 +164,7 @@ fn consume_ident
 	local str
 	?builder string_builder_finish !str
 
-	?str
+	IDENT ?str push_token
 end
 
 # void -> token*
@@ -172,18 +175,67 @@ fn consume_token
 	peek_2_chars !next_char !char
 
 	?char is_alpha if
-		consume_ident prints newline return
+		consume_ident return
 	end
 	?char is_num if
-		consume_number printi newline return
+		consume_number return
 	end
 	?char '-' eq
 		?next_char is_num
 			band if
-				consume_number printi newline return
+				consume_number return
 	end
 
 	"SYNTAX ERRROR\n" prints
+end
+
+fn print_tokens
+	local token
+	local i
+	0 !i
+
+	local len
+	&tokens get list_used !len
+
+	"TOTAL TOKENS: " prints
+	?len printu newline
+
+	loop
+		?i ?len ge if
+			break
+		end
+
+		&tokens get ?i list_get !token
+		?i 1 add !i
+
+		 ?token token_get_type NUMBER eq if
+			"TOKEN: NUMBER " prints
+			?token token_get_value printi
+			newline
+			continue
+		end
+		?token token_get_type STRING eq if
+			"TOKEN: STRING '" prints
+			?token token_get_value prints
+			"'" prints
+			newline
+			continue
+		end
+		?token token_get_type IDENT eq if
+			"TOKEN: IDENT '" prints
+			?token token_get_value prints
+			"'" prints
+			newline
+			continue
+		end
+		?token token_get_type 100 gt if
+			"TOKEN: KEYWORD " prints
+			?token token_get_value prints
+			newline
+			continue
+		end
+		"TOKEN: UNKNOWN " prints newline
+	end
 end
 
 fn main
@@ -202,6 +254,8 @@ fn main
 	&index 0 set
 
 	consume_token
+
+	print_tokens
 
 	global_arena_allocator_end
 end

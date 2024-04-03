@@ -309,6 +309,12 @@ fn list_grow local list
 	?list ?new_buffer list_set_buffer
 end
 
+# list* -> u64
+global list_used
+fn list_used
+	list_get_used
+end
+
 global memcpy
 # dest: u8*, src: u8*, size: u64 -> void
 fn memcpy local dest local src local size

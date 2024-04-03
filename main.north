@@ -93,7 +93,7 @@ fn is_whitespace local char
 
 	?char 10 eq
 		?char ' ' eq bor
-			?char 0 eq bor
+			?char 9 eq bor
 end
 
 # void -> void
@@ -167,7 +167,7 @@ fn consume_ident
 	IDENT ?str push_token
 end
 
-# void -> token*
+# void -> bool
 fn consume_token
 	consume_whitespace
 
@@ -175,18 +175,34 @@ fn consume_token
 	peek_2_chars !next_char !char
 
 	?char is_alpha if
-		consume_ident return
+		consume_ident
+		1 return
 	end
 	?char is_num if
-		consume_number return
+		consume_number
+		1 return
 	end
 	?char '-' eq
 		?next_char is_num
 			band if
-				consume_number return
+				consume_number
+				1 return
+	end
+
+	?char 0 eq if
+		0 return
 	end
 
 	"SYNTAX ERRROR\n" prints
+	0 return
+end
+
+fn consume_all_tokens
+	loop
+		consume_token not if
+			break
+		end
+	end
 end
 
 fn print_tokens
@@ -253,7 +269,7 @@ fn main
 			set
 	&index 0 set
 
-	consume_token
+	consume_all_tokens
 
 	print_tokens
 

@@ -167,6 +167,45 @@ fn consume_ident
 	IDENT ?str push_token
 end
 
+fn consume_string
+	local builder
+	string_builder_new !builder
+
+	consume_char # skip opening quote
+
+	local char
+	loop
+		peek_char !char
+		consume_char
+
+		?char '"' eq if
+			break
+		end
+		?char '\' eq if
+			peek_char !char
+			consume_char
+
+			?char 'n' eq if
+				10 !char
+			end
+
+			?char 't' eq if
+				9 !char
+			end
+
+			?char '0' eq if
+				0 !char
+			end
+		end
+		?builder ?char string_builder_push
+	end
+
+	local str
+	?builder string_builder_finish !str
+
+	STRING ?str push_token
+end
+
 # void -> bool
 fn consume_token
 	consume_whitespace
@@ -187,6 +226,10 @@ fn consume_token
 			band if
 				consume_number
 				1 return
+	end
+	?char '"' eq if
+		consume_string
+		1 return
 	end
 
 	?char 0 eq if

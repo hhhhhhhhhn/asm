@@ -164,9 +164,27 @@ fn consume_ident
 	local str
 	?builder string_builder_finish !str
 
+	?str "if" streq if
+		IF ?str push_token
+		return
+	end
+	?str "elseif" streq if
+		ELSEIF ?str push_token
+		return
+	end
+	?str "else" streq if
+		ELSE ?str push_token
+		return
+	end
+	?str "loop" streq if
+		LOOP ?str push_token
+		return
+	end
+
 	IDENT ?str push_token
 end
 
+# void -> void
 fn consume_string
 	local builder
 	string_builder_new !builder
@@ -236,10 +254,14 @@ fn consume_token
 		0 return
 	end
 
-	"SYNTAX ERRROR\n" prints
+	"\033[1;31m" prints
+	"SYNTAX ERROR" prints
+	"\033[0m" prints
+	newline
 	0 return
 end
 
+# void -> void
 fn consume_all_tokens
 	loop
 		consume_token not if
@@ -248,6 +270,7 @@ fn consume_all_tokens
 	end
 end
 
+# void -> void
 fn print_tokens
 	local token
 	local i

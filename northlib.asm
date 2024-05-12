@@ -460,6 +460,40 @@ strlen:
 	mov qword[rcx], rax
 	ret
 
+global streq
+streq:
+	mov rax, qword[rcx]
+	mov rbx, qword[rcx+8]
+	call string_eq
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+; *u8, *u8 -> bool
+string_eq:
+	push rcx
+	.loop:
+		cmp byte[rax], 0
+		jne .compare
+		cmp byte[rbx], 0
+		jne .compare
+		jmp .match
+		.compare:
+			mov cl, byte[rbx]
+			cmp byte[rax], cl
+			jne .nomatch
+			inc rax
+			inc rbx
+			jmp .loop
+	.match:
+		mov rax, 1
+		pop rcx
+		ret
+	.nomatch:
+		mov rax, 0
+		pop rcx
+		ret
+
 ; *u8 -> u64
 string_len:
 	push rbx

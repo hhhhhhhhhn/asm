@@ -12,9 +12,16 @@ ld compiled/lib.o compiled/north.o -o compiled/north
 
 nasm -g -f elf64 compiled/northlib2.s -o compiled/northlib2.o
 
-./compiled/north <main.north >compiled/out.s
+./compiled/north <main.north >compiled/hc.s
 
 nasm -g -f elf64 northlib.asm -o compiled/northlib.o
-nasm -g -f elf64 compiled/out.s -o compiled/out.o
-ld compiled/out.o compiled/northlib.o compiled/northlib2.o -o compiled/out
-./compiled/out
+nasm -g -f elf64 compiled/hc.s -o compiled/hc.o
+ld compiled/hc.o compiled/northlib.o compiled/northlib2.o -o compiled/hc
+
+./compiled/hc <main.hlang >compiled/hmain.s
+
+nasm -g -f elf64 hlib.asm -o compiled/hlib.o
+nasm -g -f elf64 compiled/hmain.s -o compiled/hmain.o
+ld compiled/hlib.o compiled/hmain.o -o compiled/hmain
+
+./compiled/hmain

@@ -38,11 +38,13 @@ fn RBRACK 54  end
 fn PLUS   55  end
 fn MINUS  56  end
 fn SEMI   57  end
+fn COMMA  58  end
 fn IF     101 end # keywords > 100
 fn ELSEIF 102 end
 fn ELSE   103 end
 fn LOOP   104 end
 fn FN     105 end
+fn EXTRN  106 end
 
 
 fn NULL 0 end
@@ -196,6 +198,10 @@ fn consume_ident
 		FN ?str push_token
 		return
 	end
+	?str "extern" streq if
+		EXTRN ?str push_token
+		return
+	end
 
 	IDENT ?str push_token
 end
@@ -297,6 +303,11 @@ fn consume_token
 	end
 	?char ';' eq if
 		SEMI ';' push_token
+		advance_char
+		1 return
+	end
+	?char ',' eq if
+		COMMA ',' push_token
 		advance_char
 		1 return
 	end
@@ -479,8 +490,21 @@ fn generate_global_statement
 		generate_function
 		return
 	end
+	peek_token token_get_type EXTRN eq if
+		advance_token
+		peek_token token_get_type IDENT ne if
+			"Expected identifier" panic
+		end
 
-	"SYNTAX ERROR: Expected fn" panic
+		"extern " prints
+		peek_token token_get_value prints
+		newline
+
+		advance_token
+		return
+	end
+
+	"SYNTAX ERROR: Expected fn or extern" panic
 end
 
 # void -> void (advances token_index & generates output)
@@ -498,11 +522,12 @@ fn generate_function
 	LPAREN expect_token
 	RPAREN expect_token
 
-	"." prints
 	?name token_get_value prints
 	":" prints newline
 
 	generate_block
+
+	"ret" prints newline
 end
 
 fn generate_block
@@ -550,14 +575,40 @@ fn generate_sum
 		generate_primary
 
 		"mov rax, qword[rcx+8]"   prints newline
-		?next_token token_get_type PLUS eq if
+
+		?next_token token_get_type PLUS eq if    # Add top two elements of stack
 			"add rax, qword[rcx]" prints newline
 		end
-		?next_token token_get_type MINUS eq if
+		?next_token token_get_type MINUS eq if   # Subtract ''
 			"sub rax, qword[rcx]" prints newline
 		end
+
 		"add rcx, 8"            prints newline
 		"mov qword[rcx], rax"   prints newline
+	end
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_argument_list
+	LPAREN expect_token
+
+	loop
+		peek_token token_get_type RPAREN eq if
+			advance_token
+			return
+		end
+
+		generate_expression
+
+		peek_token token_get_type COMMA eq
+			peek_token token_get_type RPAREN eq
+				bor not if
+					"Expected , or )" panic
+		end
+
+		peek_token token_get_type COMMA eq if
+			advance_token
+		end
 	end
 end
 
@@ -567,8 +618,7 @@ fn generate_function_call
 	peek_token !name
 	advance_token
 
-	LPAREN expect_token
-	RPAREN expect_token # TODO: Parameters
+	generate_argument_list
 
 	"call " prints
 	?name token_get_value prints newline

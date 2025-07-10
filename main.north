@@ -25,42 +25,54 @@ fn push_token local type local value
 end
 
 space input  8
-space index  8
-space length 8
+space char_index  8
+space char_length 8
 
 fn NUMBER 10  end
 fn STRING 11  end
 fn IDENT  12  end
+fn LPAREN 51  end # symbols > 50
+fn RPAREN 52  end
+fn LBRACK 53  end
+fn RBRACK 54  end
+fn PLUS   55  end
+fn MINUS  56  end
+fn SEMI   57  end
 fn IF     101 end # keywords > 100
 fn ELSEIF 102 end
 fn ELSE   103 end
 fn LOOP   104 end
+fn FN     105 end
+
+
+fn NULL 0 end
 
 # void -> char
 fn peek_char
-	&index get &length get ge if
+	&char_index get &char_length get ge if
 		0 return
 	end
 
 	&input get
-		&index get
+		&char_index get
 			add
 				get_byte
 end
 
+# void -> char, char
 fn peek_2_chars
 	peek_char
-	consume_char peek_char
+	advance_char peek_char
 
-	&index
-		&index get 1 sub
+	&char_index
+		&char_index get 1 sub
 			set
 end
 
 # void -> void (changes index)
-fn consume_char
-	&index
-		&index get 1 add
+fn advance_char
+	&char_index
+		&char_index get 1 add
 			set
 end
 
@@ -102,7 +114,7 @@ fn consume_whitespace
 		peek_char is_whitespace not if
 			break
 		end
-		consume_char
+		advance_char
 	end
 end
 
@@ -113,7 +125,7 @@ fn consume_number
 
 	peek_char '-' eq if
 		-1 !sign
-		consume_char
+		advance_char
 	end
 
 	local num
@@ -128,11 +140,11 @@ fn consume_number
 			?num
 				?char '0' sub
 					add !num
-			consume_char
+			advance_char
 			continue
 		end
 		?char '_' eq if
-			consume_char
+			advance_char
 			continue
 		end
 		break
@@ -155,7 +167,7 @@ fn consume_ident
 
 		?char is_alpha ?char is_num bor ?char '_' eq bor if
 			?builder ?char string_builder_push
-			consume_char
+			advance_char
 			continue
 		end
 		break
@@ -180,6 +192,10 @@ fn consume_ident
 		LOOP ?str push_token
 		return
 	end
+	?str "fn" streq if
+		FN ?str push_token
+		return
+	end
 
 	IDENT ?str push_token
 end
@@ -189,19 +205,19 @@ fn consume_string
 	local builder
 	string_builder_new !builder
 
-	consume_char # skip opening quote
+	advance_char # skip opening quote
 
 	local char
 	loop
 		peek_char !char
-		consume_char
+		advance_char
 
 		?char '"' eq if
 			break
 		end
 		?char '\' eq if
 			peek_char !char
-			consume_char
+			advance_char
 
 			?char 'n' eq if
 				10 !char
@@ -249,14 +265,48 @@ fn consume_token
 		consume_string
 		1 return
 	end
-
-	?char 0 eq if
-		0 return
+	?char '(' eq if
+		LPAREN '(' push_token
+		advance_char
+		1 return
+	end
+	?char ')' eq if
+		RPAREN ')' push_token
+		advance_char
+		1 return
+	end
+	?char '{' eq if
+		LBRACK '{' push_token
+		advance_char
+		1 return
+	end
+	?char '}' eq if
+		RBRACK '}' push_token
+		advance_char
+		1 return
+	end
+	?char '+' eq if
+		PLUS '+' push_token
+		advance_char
+		1 return
+	end
+	?char '-' eq if
+		MINUS '-' push_token
+		advance_char
+		1 return
+	end
+	?char ';' eq if
+		SEMI ';' push_token
+		advance_char
+		1 return
+	end
+	?char NULL eq if
+		NULL return
 	end
 
-	"\033[1;31m" prints
-	"SYNTAX ERROR" prints
-	"\033[0m" prints
+	# TODO: COMMENTS
+
+	"TOKENIZER ERROR" panic
 	newline
 	0 return
 end
@@ -268,6 +318,45 @@ fn consume_all_tokens
 			break
 		end
 	end
+end
+
+# token* -> void
+fn print_token local token
+	!token
+
+	?token token_get_type NUMBER eq if
+		"TOKEN: NUMBER " prints
+		?token token_get_value printi
+		newline
+		return
+	end
+	?token token_get_type STRING eq if
+		"TOKEN: STRING '" prints
+		?token token_get_value prints
+		"'" prints
+		newline
+		return
+	end
+	?token token_get_type IDENT eq if
+		"TOKEN: IDENT '" prints
+		?token token_get_value prints
+		"'" prints
+		newline
+		return
+	end
+	?token token_get_type 100 gt if
+		"TOKEN: KEYWORD " prints
+		?token token_get_value prints
+		newline
+		return
+	end
+	?token token_get_type 50 gt if
+		"TOKEN: SYMBOL " prints
+		?token token_get_value printc
+		newline
+		return
+	end
+	"TOKEN: UNKNOWN " prints newline
 end
 
 # void -> void
@@ -290,54 +379,258 @@ fn print_tokens
 		&tokens get ?i list_get !token
 		?i 1 add !i
 
-		 ?token token_get_type NUMBER eq if
-			"TOKEN: NUMBER " prints
-			?token token_get_value printi
-			newline
+		?token print_token
+	end
+end
+
+space token_index 8
+
+# void -> token*
+fn peek_token
+	local index
+	&token_index get !index
+
+	&tokens get ?index list_get return
+end
+
+# void -> token*, token*
+fn peek_2_tokens
+	local index
+	&token_index get !index
+
+	&tokens get ?index       list_get
+	&tokens get ?index 1 add list_get
+end
+
+# void -> bool
+fn at_end_of_tokens
+	local index
+	local len
+
+	&token_index get !index
+	&tokens get list_used !len
+
+	?index ?len ge return
+end
+
+# void -> void (advances token_index)
+fn advance_token
+	&token_index
+		&token_index get 1 add
+			set
+end
+
+# void -> void (writes output)
+fn generate_header
+	"section .text"               prints newline
+	"global _start"               prints newline
+	"global STACK"                prints newline
+	"_start:"                     prints newline
+	"lea rcx, [STACK+1024*8]"     prints newline  # Loads stack pointer to rcx (rcx will always be the stack pointer)
+	"call main"                   prints newline
+	"mov rax, 60"                 prints newline  # Exists with error code 0
+	"mov rdi, 0"                  prints newline
+	"syscall"                     prints newline
+end
+
+# char* -> void
+fn panic
+	"\033[1;31mPANIC: " prints
+	prints newline
+	"\033[0m" prints
+	60 2 0 0 syscall
+end
+
+# void -> void (writes output)
+fn generate_footer
+	"section .bss"      prints newline
+	"STACK resq 1024"   prints newline # Reserves the stack
+end
+
+# u64 (token_type) -> void (advances token_index)
+fn expect_token local expected_type
+	!expected_type
+
+	peek_token token_get_type
+		?expected_type
+			ne if
+				"Got " prints
+				peek_token print_token
+				"Expected type " prints
+				?expected_type printu newline
+				"SYNTAX ERROR: Unexpected token" panic
+		end
+	advance_token
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_program
+	loop
+		at_end_of_tokens if
+			return
+		end
+		generate_global_statement
+	end
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_global_statement
+	peek_token token_get_type FN eq if
+		generate_function
+		return
+	end
+
+	"SYNTAX ERROR: Expected fn" panic
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_function
+	FN expect_token
+
+	local name
+	peek_token !name
+
+	?name token_get_type IDENT ne if
+		"SYNTAX ERROR: Expected ident"
+	end
+	advance_token
+
+	LPAREN expect_token
+	RPAREN expect_token
+
+	"." prints
+	?name token_get_value prints
+	":" prints newline
+
+	generate_block
+end
+
+fn generate_block
+	LBRACK expect_token
+
+	local next_token
+	loop
+		peek_token !next_token
+		?next_token token_get_type RBRACK eq if
+			advance_token
+			break
+		end
+		?next_token token_get_type SEMI eq if
+			advance_token
 			continue
 		end
-		?token token_get_type STRING eq if
-			"TOKEN: STRING '" prints
-			?token token_get_value prints
-			"'" prints
-			newline
-			continue
+		generate_block_statement
+	end
+end
+
+fn generate_block_statement
+	generate_expression
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_expression
+	generate_sum
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_sum
+	local next_token
+
+	generate_primary
+	loop
+		peek_token !next_token
+
+		?next_token token_get_type PLUS ne
+			?next_token token_get_type MINUS ne
+				band if   # is not a '+' or a '-'
+			break
 		end
-		?token token_get_type IDENT eq if
-			"TOKEN: IDENT '" prints
-			?token token_get_value prints
-			"'" prints
-			newline
-			continue
+		advance_token
+
+		generate_primary
+
+		"mov rax, qword[rcx+8]"   prints newline
+		?next_token token_get_type PLUS eq if
+			"add rax, qword[rcx]" prints newline
 		end
-		?token token_get_type 100 gt if
-			"TOKEN: KEYWORD " prints
-			?token token_get_value prints
-			newline
-			continue
+		?next_token token_get_type MINUS eq if
+			"sub rax, qword[rcx]" prints newline
 		end
-		"TOKEN: UNKNOWN " prints newline
+		"add rcx, 8"            prints newline
+		"mov qword[rcx], rax"   prints newline
+	end
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_function_call
+	local name
+	peek_token !name
+	advance_token
+
+	LPAREN expect_token
+	RPAREN expect_token # TODO: Parameters
+
+	"call " prints
+	?name token_get_value prints newline
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_primary
+	local token
+	local next_token
+	peek_2_tokens !next_token !token
+
+	?token token_get_type NUMBER eq if
+		"sub rcx, 8"         prints newline
+		"mov qword[rcx], "   prints
+		?token token_get_value printi
+		newline
+		advance_token
+		return
+	end
+	?token token_get_type IDENT eq if
+		?next_token token_get_type LPAREN if
+			generate_function_call
+			return
+		end
+		"VARIABLES UNIMPLEMENTED" panic
+		return
+	end
+	?token token_get_type LPAREN eq if
+		advance_token
+		generate_expression
+		RPAREN expect_token
+		return
 	end
 end
 
 fn main
 	1024 1024 mul global_arena_allocator_start
 
+	# Reading input
+	&input
+		0 read_all_to_string
+			set
+	&char_length
+		&input get strlen
+			set
+	&char_index 0 set
+
+	# Tokenization (1st pass)
 	&tokens
 		token_size list_new
 			set
 
-	&input
-		0 read_all_to_string
-			set
-	&length
-		&input get strlen
-			set
-	&index 0 set
-
 	consume_all_tokens
 
-	print_tokens
+	# print_tokens
+
+	# Parsing and generating (2nd pass)
+	&token_index 0 set
+
+	generate_header
+	generate_program
+	generate_footer
 
 	global_arena_allocator_end
 end

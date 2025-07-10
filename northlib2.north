@@ -267,6 +267,7 @@ end
 
 global list_push_new
 # list* -> list_element*
+# Adds an empty element to the end of the list, and returns a pointer to it
 fn list_push_new local list
 	!list
 

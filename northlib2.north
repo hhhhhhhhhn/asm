@@ -336,6 +336,17 @@ fn memcpy local dest local src local size
 	end
 end
 
+# dest: u8*, src: u8* -> void
+global strcpy
+fn strcpy local dest local src
+	!src !dest
+
+	?dest
+		?src
+			?src strlen 1 add    # Include null terminator
+				memcpy
+end
+
 global list_get
 # list*, index: u64 -> element*
 fn list_get local list local index

@@ -5,6 +5,7 @@ extern string_builder_finish
 extern string_builder_push
 extern read_all_to_string
 extern list_grow
+extern strcpy
 
 struct token
 	type
@@ -39,12 +40,14 @@ fn PLUS   55  end
 fn MINUS  56  end
 fn SEMI   57  end
 fn COMMA  58  end
+fn EQ     59  end
 fn IF     101 end # keywords > 100
 fn ELSEIF 102 end
 fn ELSE   103 end
 fn LOOP   104 end
 fn FN     105 end
 fn EXTRN  106 end
+fn LET    107 end
 
 
 fn NULL 0 end
@@ -202,6 +205,10 @@ fn consume_ident
 		EXTRN ?str push_token
 		return
 	end
+	?str "let" streq if
+		LET ?str push_token
+		return
+	end
 
 	IDENT ?str push_token
 end
@@ -308,6 +315,11 @@ fn consume_token
 	end
 	?char ',' eq if
 		COMMA ',' push_token
+		advance_char
+		1 return
+	end
+	?char '=' eq if
+		EQ '=' push_token
 		advance_char
 		1 return
 	end
@@ -507,8 +519,13 @@ fn generate_global_statement
 	"SYNTAX ERROR: Expected fn or extern" panic
 end
 
+space locals      4096  # That is 64 variables with 64 character long names
+space locals_len  8
+
 # void -> void (advances token_index & generates output)
 fn generate_function
+	&locals_len 0 set
+
 	FN expect_token
 
 	local name
@@ -519,15 +536,20 @@ fn generate_function
 	end
 	advance_token
 
-	LPAREN expect_token
+	LPAREN expect_token # TODO: Parameters
 	RPAREN expect_token
 
 	?name token_get_value prints
 	":" prints newline
 
+	"push rbp"     prints newline
+	"mov rbp, rsp" prints newline
+
 	generate_block
 
-	"ret" prints newline
+	"mov rsp, rbp" prints newline
+	"pop rbp"      prints newline
+	"ret"          prints newline
 end
 
 fn generate_block
@@ -548,8 +570,80 @@ fn generate_block
 	end
 end
 
+# void -> void (advances token_index, changes locals & generates output)
+fn generate_local
+	LET expect_token
+	local string_pointer
+
+	&locals_len get 64 ge if
+		"Only 64 locals allowed" panic
+	end
+
+	&locals
+		&locals_len get 64 mul
+				add !string_pointer
+
+	peek_token token_get_type IDENT ne if
+		"Expected identifier while parsing let" panic
+	end
+
+	?string_pointer
+		peek_token token_get_value
+			strcpy
+
+	&locals_len
+		&locals_len get 1 add
+			set
+
+	"sub rsp, 8" prints newline
+
+	advance_token
+end
+
+# void -> void (advances token_index, might change locals & generates output)
 fn generate_block_statement
+	local token
+	local next_token
+	peek_2_tokens !next_token !token
+
+	?token token_get_type LET eq if
+		generate_local
+		return
+	end
+	?token token_get_type IDENT eq
+		?next_token token_get_type EQ eq
+			band if
+				generate_assignment
+				return
+	end
+
 	generate_expression
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_assignment
+	local name
+	peek_token !name
+
+	?name token_get_type IDENT ne if
+		"Expected ident while generating assignment" panic
+	end
+
+	advance_token
+	EQ expect_token
+
+	generate_expression
+
+	"; local " prints                                                 # DEBUG
+	?name token_get_value prints                                     # DEBUG
+	" at " prints                                                     # DEBUG
+	?name token_get_value get_local_index_from_top printu newline    # DEBUG
+
+	"mov rax, qword[rcx]" prints newline
+	"mov qword[rsp + 8*" prints
+	?name token_get_value get_local_index_from_top printu
+	"], rax" prints newline
+	"add rcx, 8" prints newline
 end
 
 # void -> void (advances token_index & generates output)
@@ -639,11 +733,24 @@ fn generate_primary
 		return
 	end
 	?token token_get_type IDENT eq if
-		?next_token token_get_type LPAREN if
+		?next_token token_get_type LPAREN eq if  # function call
 			generate_function_call
 			return
 		end
-		"VARIABLES UNIMPLEMENTED" panic
+
+		# regular variable
+		"; local " prints                                                 # DEBUG
+		?token token_get_value prints                                     # DEBUG
+		" at " prints                                                     # DEBUG
+		?token token_get_value get_local_index_from_top printu newline    # DEBUG
+
+		"sub rcx, 8" prints newline
+		"mov rax, qword[rsp + 8*" prints
+		?token token_get_value get_local_index_from_top printu
+		"]" prints newline
+		"mov qword[rcx], rax" prints newline
+
+		advance_token
 		return
 	end
 	?token token_get_type LPAREN eq if
@@ -651,6 +758,35 @@ fn generate_primary
 		generate_expression
 		RPAREN expect_token
 		return
+	end
+end
+
+# char* -> u64
+fn get_local_index_from_top local name
+	!name
+
+	local index
+	local string_pointer
+
+	&locals_len get 1 sub !index
+
+	loop
+		&locals
+			?index 64 mul
+					add !string_pointer
+
+		?string_pointer ?name streq if
+			&locals_len get ?index sub 1 sub return
+		end
+
+		?index 0 eq if
+			"Variable: " prints
+			?name prints newline
+
+			"Could not find local variable" panic
+		end
+
+		?index 1 sub !index
 	end
 end
 

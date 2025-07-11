@@ -1,5 +1,9 @@
 extern printu
 
 fn main() {
-	printu(1);
+	let x;
+	let y;
+	x = 3;
+	y = 1;
+	printu(x - y);
 }

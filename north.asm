@@ -893,16 +893,15 @@ push_local_from_last_token:
 	push rbx
 	push rax
 
-	lea rax, LOCALS
+	lea rax, LOCALS            ; Load pointer to string (LOCALS + 2^LOCAL_LENGTH*LOCALS_LEN)
 	mov rbx, qword[LOCALS_LEN]
 	shl rbx, LOCAL_LENGTH
 	add rax, rbx
 
-	lea rbx, LAST_TOKEN
-
+	lea rbx, LAST_TOKEN        ; Copy last token
 	call strcpy
 
-	mov rbx, qword[LOCALS_LEN]
+	mov rbx, qword[LOCALS_LEN] ; Increment LOCALS_LEN
 	inc rbx
 	mov qword[LOCALS_LEN], rbx
 

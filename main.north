@@ -48,6 +48,7 @@ fn LOOP   104 end
 fn FN     105 end
 fn EXTRN  106 end
 fn LET    107 end
+fn RETURN 108 end
 
 
 fn NULL 0 end
@@ -207,6 +208,10 @@ fn consume_ident
 	end
 	?str "let" streq if
 		LET ?str push_token
+		return
+	end
+	?str "return" streq if
+		RETURN ?str push_token
 		return
 	end
 
@@ -522,6 +527,15 @@ end
 space locals      4096  # That is 64 variables with 64 character long names
 space locals_len  8
 
+
+# Obs: This assumes a value is already in the stack
+# void -> void (generate output)
+fn generate_function_footer
+	"mov rsp, rbp" prints newline
+	"pop rbp"      prints newline
+	"ret"          prints newline
+end
+
 # void -> void (advances token_index & generates output)
 fn generate_function
 	&locals_len 0 set
@@ -536,8 +550,6 @@ fn generate_function
 	end
 	advance_token
 
-	LPAREN expect_token # TODO: Parameters
-	RPAREN expect_token
 
 	?name token_get_value prints
 	":" prints newline
@@ -545,11 +557,57 @@ fn generate_function
 	"push rbp"     prints newline
 	"mov rbp, rsp" prints newline
 
+	LPAREN expect_token # TODO: Parameters
+
+	local parameter_count 0 !parameter_count
+
+	local parameter
+
+	loop # Create the locals for the parameters
+		peek_token token_get_type IDENT ne if
+			break
+		end
+		peek_token !parameter
+
+		?parameter token_get_value create_local
+		advance_token
+
+		?parameter_count 1 add !parameter_count
+
+		peek_token token_get_type COMMA eq
+			peek_token token_get_type RPAREN eq
+				bor not if
+					"Expected , or ) when parsing parameter list" panic
+		end
+
+		peek_token token_get_type COMMA eq if
+			advance_token
+		end
+	end
+
+	RPAREN expect_token
+
+	local i 0 !i
+	loop # Pops the stack into the locals
+		?i ?parameter_count ge if
+			break
+		end
+
+		"mov rax, qword[rcx]" prints newline
+
+		"mov qword[rsp + 8*" prints
+		?i printu
+		"], rax" prints newline
+
+		"add rcx, 8" prints newline
+
+		?i 1 add !i
+	end
+
 	generate_block
 
-	"mov rsp, rbp" prints newline
-	"pop rbp"      prints newline
-	"ret"          prints newline
+	"sub rcx, 8" # Push a random value, all function must return a 64 bit value
+	generate_function_footer
 end
 
 fn generate_block
@@ -570,10 +628,11 @@ fn generate_block
 	end
 end
 
-# void -> void (advances token_index, changes locals & generates output)
-fn generate_local
-	LET expect_token
-	local string_pointer
+# char* (local name) -> void (generates output)
+fn create_local local local_name
+	!local_name
+
+	local dst_pointer
 
 	&locals_len get 64 ge if
 		"Only 64 locals allowed" panic
@@ -581,14 +640,10 @@ fn generate_local
 
 	&locals
 		&locals_len get 64 mul
-				add !string_pointer
+				add !dst_pointer
 
-	peek_token token_get_type IDENT ne if
-		"Expected identifier while parsing let" panic
-	end
-
-	?string_pointer
-		peek_token token_get_value
+	?dst_pointer
+		?local_name
 			strcpy
 
 	&locals_len
@@ -596,6 +651,17 @@ fn generate_local
 			set
 
 	"sub rsp, 8" prints newline
+end
+
+# void -> void (advances token_index, changes locals & generates output)
+fn generate_local
+	LET expect_token
+
+	peek_token token_get_type IDENT ne if
+		"Expected identifier while parsing let" panic
+	end
+
+	peek_token token_get_value create_local
 
 	advance_token
 end
@@ -610,6 +676,12 @@ fn generate_block_statement
 		generate_local
 		return
 	end
+	?token token_get_type RETURN eq if
+		advance_token
+		generate_expression
+		generate_function_footer
+		return
+	end
 	?token token_get_type IDENT eq
 		?next_token token_get_type EQ eq
 			band if
@@ -618,6 +690,7 @@ fn generate_block_statement
 	end
 
 	generate_expression
+	"add rcx, 8"                      # All expressions push a 64 bit value, pop it
 end
 
 # void -> void (advances token_index & generates output)

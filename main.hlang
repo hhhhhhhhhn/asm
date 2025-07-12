@@ -5,5 +5,9 @@ fn main() {
 	let y;
 	x = 3;
 	y = 1;
-	printu(x - y);
+	printu(sub(x,y));
+}
+
+fn sub(a, b) {
+	return a - b
 }

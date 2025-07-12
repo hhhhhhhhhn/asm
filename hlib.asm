@@ -16,7 +16,7 @@ printu:
 	call prints
 
 	add rsp, 32
-	add rcx, 8
+	;add rcx, 8 ; Return the same value
 	ret
 
 write_unsigned:
@@ -72,7 +72,7 @@ prints:
 	syscall
 
 	pop rcx
-	add rcx, 8
+	; add rcx, 8 ; Return the same value
 	ret
 
 ; *u8 -> u64

@@ -618,7 +618,7 @@ fn generate_block
 		peek_token !next_token
 		?next_token token_get_type RBRACK eq if
 			advance_token
-			break
+			return
 		end
 		?next_token token_get_type SEMI eq if
 			advance_token
@@ -682,6 +682,10 @@ fn generate_block_statement
 		generate_function_footer
 		return
 	end
+	?token token_get_type IF eq if
+		generate_if_statement
+		return
+	end
 	?token token_get_type IDENT eq
 		?next_token token_get_type EQ eq
 			band if
@@ -717,6 +721,69 @@ fn generate_assignment
 	?name token_get_value get_local_index_from_top printu
 	"], rax" prints newline
 	"add rcx, 8" prints newline
+end
+
+space id 8
+
+# void -> u64
+fn new_id
+	&id
+		&id get 1 add
+			set
+
+	&id get return
+end
+
+# void -> void (advances token_index & generates output)
+# Generates either if or elseif statements
+fn generate_if_statement
+	peek_token token_get_type IF eq
+		peek_token token_get_type ELSEIF eq
+			bor not if
+				"Got" prints
+				peek_token print_token
+				"Expected if or elseif when parsing string" panic
+	end
+	advance_token
+
+	local id
+	new_id !id
+
+	generate_expression
+
+	"mov rax, qword[rcx]" prints newline
+	"add rcx, 8"          prints newline
+	"cmp rax, 0"          prints newline
+	"je .if" prints
+		?id printu
+			"false" prints newline
+
+	".if" prints
+		?id printu
+			"true:" prints newline
+
+	generate_block
+
+	"jmp .if" prints
+		?id printu
+			"end" prints newline
+
+	".if" prints
+		?id printu
+			"false:" prints newline
+
+	peek_token token_get_type ELSEIF eq if
+		generate_if_statement
+	else
+		peek_token token_get_type ELSE eq if
+			advance_token
+			generate_block
+		end
+	end
+
+	".if" prints
+		?id printu
+			"end:" prints newline
 end
 
 # void -> void (advances token_index & generates output)

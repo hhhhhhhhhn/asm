@@ -1,22 +1,8 @@
 extern printu
 
 fn main() {
-	let x;
-	let y;
-	if 0 {
+	loop {
 		printu(1);
+		continue;
 	}
-	elseif 0 {
-		printu(2);
-	}
-	else {
-		printu(3);
-	}
-	x = 3;
-	y = 1;
-	printu(sub(x,y));
-}
-
-fn sub(a, b) {
-	return a - b
 }

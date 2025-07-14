@@ -29,26 +29,28 @@ space input  8
 space char_index  8
 space char_length 8
 
-fn NUMBER 10  end
-fn STRING 11  end
-fn IDENT  12  end
-fn LPAREN 51  end # symbols > 50
-fn RPAREN 52  end
-fn LBRACK 53  end
-fn RBRACK 54  end
-fn PLUS   55  end
-fn MINUS  56  end
-fn SEMI   57  end
-fn COMMA  58  end
-fn EQ     59  end
-fn IF     101 end # keywords > 100
-fn ELSEIF 102 end
-fn ELSE   103 end
-fn LOOP   104 end
-fn FN     105 end
-fn EXTRN  106 end
-fn LET    107 end
-fn RETURN 108 end
+fn NUMBER   10  end
+fn STRING   11  end
+fn IDENT    12  end
+fn LPAREN   51  end # symbols > 50
+fn RPAREN   52  end
+fn LBRACK   53  end
+fn RBRACK   54  end
+fn PLUS     55  end
+fn MINUS    56  end
+fn SEMI     57  end
+fn COMMA    58  end
+fn EQ       59  end
+fn IF       101 end # keywords > 100
+fn ELSEIF   102 end
+fn ELSE     103 end
+fn LOOP     104 end
+fn FN       105 end
+fn EXTRN    106 end
+fn LET      107 end
+fn RETURN   108 end
+fn BREAK    109 end
+fn CONTINUE 110 end
 
 
 fn NULL 0 end
@@ -212,6 +214,14 @@ fn consume_ident
 	end
 	?str "return" streq if
 		RETURN ?str push_token
+		return
+	end
+	?str "break" streq if
+		BREAK ?str push_token
+		return
+	end
+	?str "continue" streq if
+		CONTINUE ?str push_token
 		return
 	end
 
@@ -686,6 +696,18 @@ fn generate_block_statement
 		generate_if_statement
 		return
 	end
+	?token token_get_type LOOP eq if
+		generate_loop
+		return
+	end
+	?token token_get_type BREAK eq if
+		generate_break
+		return
+	end
+	?token token_get_type CONTINUE eq if
+		generate_continue
+		return
+	end
 	?token token_get_type IDENT eq
 		?next_token token_get_type EQ eq
 			band if
@@ -694,7 +716,7 @@ fn generate_block_statement
 	end
 
 	generate_expression
-	"add rcx, 8"                      # All expressions push a 64 bit value, pop it
+	"add rcx, 8" prints newline     # All expressions push a 64 bit value, pop it
 end
 
 # void -> void (advances token_index & generates output)
@@ -784,6 +806,63 @@ fn generate_if_statement
 	".if" prints
 		?id printu
 			"end:" prints newline
+end
+
+space current_loop_id 8
+
+# void -> void (advances token_index & generates output)
+fn generate_loop
+	local id
+	new_id !id
+
+	local last_loop_id
+	&current_loop_id get !last_loop_id
+
+	&current_loop_id
+		?id
+			set
+
+	LOOP expect_token
+
+	".loop" prints
+		?id printu
+			"start:" prints newline
+
+	generate_block
+
+	"jmp .loop" prints
+		?id printu
+			"start" prints newline
+
+	".loop" prints
+		?id printu
+			"end:" prints newline
+
+	&current_loop_id
+		?last_loop_id
+			set
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_break
+	BREAK expect_token
+	local id
+	&current_loop_id get !id
+
+	"jmp .loop" prints
+		?id printu
+			"end" prints newline
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_continue
+	CONTINUE expect_token
+	local id
+	&current_loop_id get !id
+
+	"jmp .loop" prints
+		?id printu
+			"start" prints newline
 end
 
 # void -> void (advances token_index & generates output)

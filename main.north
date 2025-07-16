@@ -66,7 +66,8 @@ fn AND      111 end
 fn OR       112 end
 fn SPACE    113 end
 fn GLOBL    114 end
-fn WHILE    114 end
+fn WHILE    115 end
+fn FOR      116 end
 
 fn NULL 0 end
 
@@ -257,6 +258,10 @@ fn consume_ident
 	end
 	?str "while" streq if
 		WHILE ?str push_token
+		return
+	end
+	?str "for" streq if
+		FOR ?str push_token
 		return
 	end
 
@@ -952,6 +957,10 @@ fn generate_block_statement
 		generate_while
 		return
 	end
+	?token token_get_type FOR eq if
+		generate_for
+		return
+	end
 	?token token_get_type BREAK eq if
 		generate_break
 		return
@@ -1133,6 +1142,71 @@ fn generate_while
 	"jmp .loop" prints
 		?id printu
 			"start" prints newline
+
+	".loop" prints
+		?id printu
+			"end:" prints newline
+
+	&current_loop_id
+		?last_loop_id
+			set
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_for
+	local id
+	new_id !id
+
+	local last_loop_id
+	&current_loop_id get !last_loop_id
+
+	&current_loop_id
+		?id
+			set
+
+	FOR expect_token
+	LPAREN expect_token
+
+	generate_block_statement  # let i = 0
+	SEMI expect_token
+
+	".loop" prints
+		?id printu
+			"start:" prints newline
+
+	generate_expression       # i < 0
+	SEMI expect_token
+
+	"mov rax, qword[rcx]" prints newline
+	"add rcx, 8"          prints newline
+	"cmp rax, 0"          prints newline
+	"je .loop" prints
+		?id printu
+			"end" prints newline
+
+	"jmp .loop" prints
+		?id printu
+			"body" prints newline
+	".loop" prints
+		?id printu
+			"post:" prints newline
+
+	generate_block_statement  # i = i + 1
+	RPAREN expect_token
+
+	"jmp .loop" prints
+		?id printu
+			"start" prints newline
+
+	".loop" prints
+		?id printu
+			"body:" prints newline
+
+	generate_block
+
+	"jmp .loop" prints
+		?id printu
+			"post" prints newline
 
 	".loop" prints
 		?id printu

@@ -16,6 +16,11 @@ fn main() {
 		i = i+1;
 	}
 
+	for (let j = 0; j < 5; j = j + 1) {
+		printu(j);
+		prints("\n");
+	}
+
 	let x = 4;
 
 	prints("x = ");

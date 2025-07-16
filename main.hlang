@@ -2,7 +2,25 @@ extern printu
 extern prints
 
 fn main() {
+	let x = 4;
+
+	prints("x = ");
+	printu(x);
+	prints("\n\n")
+
 	printu(7/2);
 	printu(7%2);
 	printu(7*2);
+
+	prints("\n");
+
+	if 2*7 < 10 or 0 {
+		prints("?\n")
+	} 
+	elseif 2*7 > 10 {
+		prints("ye\n")
+	}
+	else {
+		prints("????\n")
+	}
 }

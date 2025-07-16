@@ -804,7 +804,13 @@ fn generate_local
 
 	peek_token token_get_value create_local
 
-	advance_token
+	peek_2_tokens swap pop token_get_type EQ eq if  # let x = ...
+		"; Genarating assignment" prints newline
+		generate_assignment
+	else
+		"; Just advancing" prints newline
+		advance_token
+	end
 end
 
 # void -> void (advances token_index, might change locals & generates output)

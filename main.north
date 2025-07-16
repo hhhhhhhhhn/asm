@@ -50,6 +50,8 @@ fn GE       65  end
 fn MULT     66  end
 fn DIVIDE   67  end
 fn MODULO   68  end
+fn POINTER  69  end
+fn DEREF    70  end
 fn IF       101 end # keywords > 100
 fn ELSEIF   102 end
 fn ELSE     103 end
@@ -62,6 +64,7 @@ fn BREAK    109 end
 fn CONTINUE 110 end
 fn AND      111 end
 fn OR       112 end
+fn SPACE    113 end
 
 
 fn NULL 0 end
@@ -243,6 +246,10 @@ fn consume_ident
 		OR ?str push_token
 		return
 	end
+	?str "space" streq if
+		SPACE ?str push_token
+		return
+	end
 
 	IDENT ?str push_token
 end
@@ -367,10 +374,15 @@ fn consume_token
 		advance_char
 		1 return
 	end
+	?char '&' eq if
+		POINTER '&' push_token
+		advance_char
+		1 return
+	end
 	?char '=' eq
 		?next_char '=' eq 
 			band if
-				EQEQ '~' push_token
+				EQEQ 'e' push_token
 				advance_char
 				advance_char
 				1 return
@@ -383,7 +395,7 @@ fn consume_token
 	?char '<' eq 
 		?next_char '=' eq 
 			band if
-				LE '~' push_token
+				LE 'l' push_token
 				advance_char
 				advance_char
 				1 return
@@ -391,7 +403,7 @@ fn consume_token
 	?char '>' eq 
 		?next_char '=' eq 
 			band if
-				GE '~' push_token
+				GE 'g' push_token
 				advance_char
 				advance_char
 				1 return
@@ -399,7 +411,7 @@ fn consume_token
 	?char '!' eq 
 		?next_char '=' eq 
 			band if
-				NE '~' push_token
+				NE 'n' push_token
 				advance_char
 				advance_char
 				1 return
@@ -652,6 +664,10 @@ fn generate_global_statement
 		generate_global_variable
 		return
 	end
+	peek_token token_get_type SPACE eq if
+		generate_space
+		return
+	end
 	peek_token token_get_type EXTRN eq if
 		advance_token
 		peek_token token_get_type IDENT ne if
@@ -714,6 +730,30 @@ fn generate_global_variable
 		"section .text" prints newline
 		return
 	end
+end
+
+fn generate_space
+	SPACE expect_token
+
+	peek_token token_get_type IDENT ne if
+		"Expected ident while generating space" panic
+	end
+
+	"section .bss" prints newline
+	peek_token token_get_value prints
+		" resb " prints
+
+	advance_token
+
+	peek_token token_get_type NUMBER ne if
+		"Expected number while generating space" panic
+	end
+
+	peek_token token_get_value printu newline
+
+	advance_token
+
+	"section .text" prints newline
 end
 
 space locals      4096  # That is 64 variables with 64 character long names
@@ -1114,8 +1154,8 @@ fn generate_comparison
 		?next_token token_get_type GE ne band
 			?next_token token_get_type LT ne band
 				?next_token token_get_type GT ne band
-					?next_token token_get_type GT ne band
-						?next_token token_get_type GT ne band
+					?next_token token_get_type EQEQ ne band
+						?next_token token_get_type NE ne band
 							if
 								return
 	end
@@ -1185,7 +1225,7 @@ end
 fn generate_product
 	local next_token
 
-	generate_primary
+	generate_unuary
 	loop
 		peek_token !next_token
 
@@ -1196,7 +1236,7 @@ fn generate_product
 		end
 		advance_token
 
-		generate_primary
+		generate_unuary
 
 		"mov rax, qword[rcx+8]"   prints newline
 		"mov rbx, qword[rcx]"     prints newline
@@ -1220,6 +1260,27 @@ fn generate_product
 			"mov  qword[rcx], rdx"   prints newline
 		end
 	end
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_unuary
+	peek_token token_get_type MULT eq if
+		advance_token
+		generate_primary
+
+		"mov rax, qword[rcx]"   prints newline
+		"mov rbx, qword[rax]"  prints newline
+		"mov qword[rcx], rbx"   prints newline
+	end
+	peek_token token_get_type MINUS eq if
+		advance_token
+		generate_primary
+
+		"mov rax, qword[rcx]"   prints newline
+		"neg rax"               prints newline
+		"mov qword[rcx], rax"   prints newline
+	end
+	generate_primary
 end
 
 # void -> void (advances token_index & generates output)
@@ -1294,12 +1355,33 @@ fn generate_primary
 		else
 			"sub rcx, 8" prints newline
 			"mov rax, qword[rsp + 8*" prints
-			?local_index printu
-			"]" prints newline
+				?local_index printu
+					"]" prints newline
 			"mov qword[rcx], rax" prints newline
 		end
 		advance_token
 		return
+	end
+	?token token_get_type POINTER eq if
+		?next_token token_get_type IDENT ne if
+			"Expected ident when generating pointer" panic
+		end
+		?next_token token_get_value get_local_index_from_top !local_index
+
+		?local_index -1 eq if
+			"mov rax, " prints
+				?next_token token_get_value prints newline
+			"sub rcx, 8" prints newline
+			"mov qword[rcx], rax" prints newline
+		else
+			"mov rax, rsp + 8*" prints
+				?local_index printu newline
+			"sub rcx, 8" prints newline
+			"mov qword[rcx], rax" prints newline
+		end
+
+		advance_token
+		advance_token
 	end
 	?token token_get_type LPAREN eq if
 		advance_token

@@ -1,6 +1,7 @@
 extern printu
 extern prints
 
+space reserved 1024
 let global1
 let global2 = 2
 let global3 = "Hello there"
@@ -10,21 +11,36 @@ fn main() {
 
 	prints("x = ");
 	printu(x);
-	prints("\n")
+	prints("\n");
+
+	prints("x = ");
+	printu(*(&x));
+	prints("\n");
 
 	prints("global3 = ");
 	prints(global3);
+	prints("\n");
+
+	prints("global2 = ");
+	printu(global2);
+	prints("\n");
+	prints("global2 = ");
+	printu(*(&global2));
+	prints("\n\n");
+
+	global2 = 1;
+
+	prints("global2 = ");
+	printu(global2);
+
+	prints("\n\n");
+
+	printu(&x);
+	prints("\n")
+	printu(&global1);
 	prints("\n")
 
-	prints("global2 = ");
-	printu(global2);
-	prints("\n\n")
-
-	global2 = 1
-
-	prints("global2 = ");
-	printu(global2);
-	prints("\n\n")
+	prints("\n\n");
 
 	printu(7/2);
 	printu(7%2);
@@ -35,7 +51,7 @@ fn main() {
 	if 2*7 < 10 or 0 {
 		prints("?\n")
 	} 
-	elseif 2*7 > 10 {
+	elseif -(10) == -10 {
 		prints("ye\n")
 	}
 	else {

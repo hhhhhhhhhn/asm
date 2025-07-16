@@ -1,10 +1,12 @@
 extern printu
 extern prints
 
+global reserved
 space reserved 1024
 let global1
 let global2 = 2
 let global3 = "Hello there"
+
 
 fn main() {
 	let x = 4;

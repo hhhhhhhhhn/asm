@@ -65,7 +65,7 @@ fn CONTINUE 110 end
 fn AND      111 end
 fn OR       112 end
 fn SPACE    113 end
-
+fn GLOBL    114 end
 
 fn NULL 0 end
 
@@ -250,6 +250,10 @@ fn consume_ident
 		SPACE ?str push_token
 		return
 	end
+	?str "global" streq if
+		GLOBL ?str push_token
+		return
+	end
 
 	IDENT ?str push_token
 end
@@ -380,7 +384,7 @@ fn consume_token
 		1 return
 	end
 	?char '=' eq
-		?next_char '=' eq 
+		?next_char '=' eq
 			band if
 				EQEQ 'e' push_token
 				advance_char
@@ -392,24 +396,24 @@ fn consume_token
 		advance_char
 		1 return
 	end
-	?char '<' eq 
-		?next_char '=' eq 
+	?char '<' eq
+		?next_char '=' eq
 			band if
 				LE 'l' push_token
 				advance_char
 				advance_char
 				1 return
 	end
-	?char '>' eq 
-		?next_char '=' eq 
+	?char '>' eq
+		?next_char '=' eq
 			band if
 				GE 'g' push_token
 				advance_char
 				advance_char
 				1 return
 	end
-	?char '!' eq 
-		?next_char '=' eq 
+	?char '!' eq
+		?next_char '=' eq
 			band if
 				NE 'n' push_token
 				advance_char
@@ -668,10 +672,23 @@ fn generate_global_statement
 		generate_space
 		return
 	end
+	peek_token token_get_type GLOBL eq if
+		advance_token
+		peek_token token_get_type IDENT ne if
+			"Expected identifier while generating global"
+		end
+
+		"global " prints
+		peek_token token_get_value prints
+		newline
+
+		advance_token
+		return
+	end
 	peek_token token_get_type EXTRN eq if
 		advance_token
 		peek_token token_get_type IDENT ne if
-			"Expected identifier" panic
+			"Expected identifier while generating extern" panic
 		end
 
 		"extern " prints

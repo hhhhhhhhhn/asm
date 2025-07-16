@@ -648,6 +648,10 @@ fn generate_global_statement
 		generate_function
 		return
 	end
+	peek_token token_get_type LET eq if
+		generate_global_variable
+		return
+	end
 	peek_token token_get_type EXTRN eq if
 		advance_token
 		peek_token token_get_type IDENT ne if
@@ -663,6 +667,53 @@ fn generate_global_statement
 	end
 
 	"SYNTAX ERROR: Expected fn or extern" panic
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_global_variable
+	LET expect_token
+
+	local name
+	peek_token !name
+	
+	?name token_get_type IDENT ne if
+		"Expected ident while generating global variable" panic
+	end
+	advance_token
+
+	"section .data" prints newline
+
+	local string_index
+
+	peek_token token_get_type EQ eq if # With assignment
+		advance_token
+		peek_token token_get_type NUMBER eq if
+			?name token_get_value prints
+				" dq " prints
+					peek_token token_get_value printu newline
+			advance_token
+
+			"section .text" prints newline
+			return
+		end
+		peek_token token_get_type STRING eq if
+			peek_token token_get_value create_string !string_index
+			?name token_get_value prints
+				" dq STRING" prints
+					?string_index printu newline
+			advance_token
+
+			"section .text" prints newline
+			return
+		end
+
+		"Expected number or string while generating global variable" panic
+	else
+		?name token_get_value prints
+			" dq 0" prints newline
+		"section .text" prints newline
+		return
+	end
 end
 
 space locals      4096  # That is 64 variables with 64 character long names
@@ -869,11 +920,6 @@ fn generate_assignment
 	EQ expect_token
 
 	generate_expression
-
-	"; local " prints                                                 # DEBUG
-	?name token_get_value prints                                     # DEBUG
-	" at " prints                                                     # DEBUG
-	?name token_get_value get_local_index_from_top printu newline    # DEBUG
 
 	"mov rax, qword[rcx]" prints newline
 	"mov qword[rsp + 8*" prints
@@ -1218,24 +1264,29 @@ fn generate_primary
 		advance_token
 		return
 	end
+
+	local local_index
 	?token token_get_type IDENT eq if
 		?next_token token_get_type LPAREN eq if  # function call
 			generate_function_call
 			return
 		end
 
-		# regular variable
-		"; local " prints                                                 # DEBUG
-		?token token_get_value prints                                     # DEBUG
-		" at " prints                                                     # DEBUG
-		?token token_get_value get_local_index_from_top printu newline    # DEBUG
+		?token token_get_value get_local_index_from_top !local_index
 
-		"sub rcx, 8" prints newline
-		"mov rax, qword[rsp + 8*" prints
-		?token token_get_value get_local_index_from_top printu
-		"]" prints newline
-		"mov qword[rcx], rax" prints newline
-
+		?local_index -1 eq if # No such local variable, assume a global
+			"mov rax, qword[" prints
+				?token token_get_value prints
+					"]" prints newline
+			"sub rcx, 8" prints newline
+			"mov qword[rcx], rax" prints newline
+		else
+			"sub rcx, 8" prints newline
+			"mov rax, qword[rsp + 8*" prints
+			?local_index printu
+			"]" prints newline
+			"mov qword[rcx], rax" prints newline
+		end
 		advance_token
 		return
 	end
@@ -1308,6 +1359,7 @@ fn create_string local str
 	&strings_len get 1 sub return
 end
 
+# Returns -1 if not found
 # char* -> u64
 fn get_local_index_from_top local name
 	!name
@@ -1327,10 +1379,7 @@ fn get_local_index_from_top local name
 		end
 
 		?index 0 eq if
-			"Variable: " prints
-			?name prints newline
-
-			"Could not find local variable" panic
+			-1 return
 		end
 
 		?index 1 sub !index

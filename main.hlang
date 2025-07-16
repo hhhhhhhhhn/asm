@@ -1,11 +1,23 @@
 extern printu
 extern prints
 
+let global1
+let global2 = 2
+let global3 = "Hello there"
+
 fn main() {
 	let x = 4;
 
 	prints("x = ");
 	printu(x);
+	prints("\n")
+
+	prints("global3 = ");
+	prints(global3);
+	prints("\n")
+
+	prints("global2 = ");
+	printu(global2);
 	prints("\n\n")
 
 	printu(7/2);

@@ -2,5 +2,7 @@ extern printu
 extern prints
 
 fn main() {
-	prints("Hello, world\n");
+	printu(7/2);
+	printu(7%2);
+	printu(7*2);
 }

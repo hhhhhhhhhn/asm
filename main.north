@@ -41,6 +41,15 @@ fn MINUS    56  end
 fn SEMI     57  end
 fn COMMA    58  end
 fn EQ       59  end
+fn LT       60  end
+fn GT       61  end
+fn EQEQ     62  end
+fn NE       63  end
+fn LE       64  end
+fn GE       65  end
+fn MULT     66  end
+fn DIVIDE   67  end
+fn MODULO   68  end
 fn IF       101 end # keywords > 100
 fn ELSEIF   102 end
 fn ELSE     103 end
@@ -51,6 +60,8 @@ fn LET      107 end
 fn RETURN   108 end
 fn BREAK    109 end
 fn CONTINUE 110 end
+fn AND      111 end
+fn OR       112 end
 
 
 fn NULL 0 end
@@ -224,6 +235,14 @@ fn consume_ident
 		CONTINUE ?str push_token
 		return
 	end
+	?str "and" streq if
+		AND ?str push_token
+		return
+	end
+	?str "or" streq if
+		OR ?str push_token
+		return
+	end
 
 	IDENT ?str push_token
 end
@@ -333,8 +352,65 @@ fn consume_token
 		advance_char
 		1 return
 	end
+	?char '*' eq if
+		MULT '*' push_token
+		advance_char
+		1 return
+	end
+	?char '/' eq if
+		DIVIDE '/' push_token
+		advance_char
+		1 return
+	end
+	?char '%' eq if
+		MODULO '%' push_token
+		advance_char
+		1 return
+	end
+	?char '=' eq
+		?next_char '=' eq 
+			band if
+				EQEQ '~' push_token
+				advance_char
+				advance_char
+				1 return
+	end
 	?char '=' eq if
 		EQ '=' push_token
+		advance_char
+		1 return
+	end
+	?char '<' eq 
+		?next_char '=' eq 
+			band if
+				LE '~' push_token
+				advance_char
+				advance_char
+				1 return
+	end
+	?char '>' eq 
+		?next_char '=' eq 
+			band if
+				GE '~' push_token
+				advance_char
+				advance_char
+				1 return
+	end
+	?char '!' eq 
+		?next_char '=' eq 
+			band if
+				NE '~' push_token
+				advance_char
+				advance_char
+				1 return
+	end
+	?char '<' eq if
+		LT '<' push_token
+		advance_char
+		1 return
+	end
+	?char '>' eq if
+		GT '>' push_token
 		advance_char
 		1 return
 	end
@@ -922,25 +998,111 @@ end
 
 # void -> void (advances token_index & generates output)
 fn generate_expression
+	generate_logical_expression
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_logical_expression
+	local next_token
+
+	generate_comparison
+	loop
+		peek_token !next_token
+
+		?next_token token_get_type AND ne
+			?next_token token_get_type OR ne
+				band if   # is not an 'and' or an 'or'
+					break
+		end
+		advance_token
+
+		generate_comparison
+
+		"mov rax, 0"              prints newline  # Cast into boolean (x = x!=0)
+		"mov rdx, qword[rcx+8]"   prints newline
+		"cmp rdx, 0"              prints newline
+		"setne al"                prints newline
+
+		"mov rbx, 0"              prints newline
+		"mov rdx, qword[rcx]"     prints newline
+		"cmp rdx, 0"              prints newline
+		"setne bl"                prints newline
+
+		?next_token token_get_type AND eq if    # Add top two elements of stack
+			"and rax, rbx" prints newline
+		end
+		?next_token token_get_type OR eq if   # Subtract ''
+			"or rax, rbx" prints newline
+		end
+
+		"add rcx, 8"            prints newline
+		"mov qword[rcx], rax"   prints newline
+	end
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_comparison
+	local next_token
+
 	generate_sum
+	peek_token !next_token
+
+	?next_token token_get_type LE ne
+		?next_token token_get_type GE ne band
+			?next_token token_get_type LT ne band
+				?next_token token_get_type GT ne band
+					?next_token token_get_type GT ne band
+						?next_token token_get_type GT ne band
+							if
+								return
+	end
+	advance_token
+
+	generate_sum
+
+	"mov rdx, 0"              prints newline
+	"mov rax, qword[rcx+8]"   prints newline
+	"mov rbx, qword[rcx]"     prints newline
+	"cmp rax, rbx"            prints newline
+
+	?next_token token_get_type LE eq if
+		"setle dl" prints newline
+	end
+	?next_token token_get_type GE eq if
+		"setge dl" prints newline
+	end
+	?next_token token_get_type LT eq if
+		"setl dl" prints newline
+	end
+	?next_token token_get_type GT eq if
+		"setg dl" prints newline
+	end
+	?next_token token_get_type EQEQ eq if
+		"sete dl" prints newline
+	end
+	?next_token token_get_type NE eq if
+		"setne dl" prints newline
+	end
+	"add rcx, 8"            prints newline
+	"mov qword[rcx], rdx"   prints newline
 end
 
 # void -> void (advances token_index & generates output)
 fn generate_sum
 	local next_token
 
-	generate_primary
+	generate_product
 	loop
 		peek_token !next_token
 
 		?next_token token_get_type PLUS ne
 			?next_token token_get_type MINUS ne
 				band if   # is not a '+' or a '-'
-			break
+					break
 		end
 		advance_token
 
-		generate_primary
+		generate_product
 
 		"mov rax, qword[rcx+8]"   prints newline
 
@@ -953,6 +1115,47 @@ fn generate_sum
 
 		"add rcx, 8"            prints newline
 		"mov qword[rcx], rax"   prints newline
+	end
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_product
+	local next_token
+
+	generate_primary
+	loop
+		peek_token !next_token
+
+		?next_token token_get_type MULT ne
+			?next_token token_get_type DIVIDE ne band
+				?next_token token_get_type MODULO ne band if
+					break
+		end
+		advance_token
+
+		generate_primary
+
+		"mov rax, qword[rcx+8]"   prints newline
+		"mov rbx, qword[rcx]"     prints newline
+
+		?next_token token_get_type MULT eq if
+			"imul rbx"               prints newline
+			"add  rcx, 8"            prints newline
+			"mov  qword[rcx], rax"   prints newline
+			return
+		end
+
+		"mov  rdx, 0" prints newline
+		"idiv rbx"    prints newline
+
+		?next_token token_get_type DIVIDE eq if
+			"add  rcx, 8"            prints newline
+			"mov  qword[rcx], rax"   prints newline
+		end
+		?next_token token_get_type MODULO eq if
+			"add  rcx, 8"            prints newline
+			"mov  qword[rcx], rdx"   prints newline
+		end
 	end
 end
 

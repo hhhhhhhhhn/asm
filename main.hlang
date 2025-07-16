@@ -9,6 +9,13 @@ let global3 = "Hello there"
 
 
 fn main() {
+	let i = 0;
+	while i < 10 {
+		printu(i);
+		prints("\n");
+		i = i+1;
+	}
+
 	let x = 4;
 
 	prints("x = ");
@@ -52,7 +59,7 @@ fn main() {
 
 	if 2*7 < 10 or 0 {
 		prints("?\n")
-	} 
+	}
 	elseif -(10) == -10 {
 		prints("ye\n")
 	}

@@ -66,6 +66,7 @@ fn AND      111 end
 fn OR       112 end
 fn SPACE    113 end
 fn GLOBL    114 end
+fn WHILE    114 end
 
 fn NULL 0 end
 
@@ -252,6 +253,10 @@ fn consume_ident
 	end
 	?str "global" streq if
 		GLOBL ?str push_token
+		return
+	end
+	?str "while" streq if
+		WHILE ?str push_token
 		return
 	end
 
@@ -913,10 +918,8 @@ fn generate_local
 	peek_token token_get_value create_local
 
 	peek_2_tokens swap pop token_get_type EQ eq if  # let x = ...
-		"; Genarating assignment" prints newline
 		generate_assignment
 	else
-		"; Just advancing" prints newline
 		advance_token
 	end
 end
@@ -943,6 +946,10 @@ fn generate_block_statement
 	end
 	?token token_get_type LOOP eq if
 		generate_loop
+		return
+	end
+	?token token_get_type WHILE eq if
+		generate_while
 		return
 	end
 	?token token_get_type BREAK eq if
@@ -1078,6 +1085,48 @@ fn generate_loop
 	".loop" prints
 		?id printu
 			"start:" prints newline
+
+	generate_block
+
+	"jmp .loop" prints
+		?id printu
+			"start" prints newline
+
+	".loop" prints
+		?id printu
+			"end:" prints newline
+
+	&current_loop_id
+		?last_loop_id
+			set
+end
+
+# void -> void (advances token_index & generates output)
+fn generate_while
+	local id
+	new_id !id
+
+	local last_loop_id
+	&current_loop_id get !last_loop_id
+
+	&current_loop_id
+		?id
+			set
+
+	WHILE expect_token
+
+	".loop" prints
+		?id printu
+			"start:" prints newline
+
+	generate_expression
+
+	"mov rax, qword[rcx]" prints newline
+	"add rcx, 8"          prints newline
+	"cmp rax, 0"          prints newline
+	"je .loop" prints
+		?id printu
+			"end" prints newline
 
 	generate_block
 

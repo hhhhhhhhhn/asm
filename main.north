@@ -32,6 +32,7 @@ space char_length 8
 fn NUMBER   10  end
 fn STRING   11  end
 fn IDENT    12  end
+fn CHR      13  end
 fn LPAREN   51  end # symbols > 50
 fn RPAREN   52  end
 fn LBRACK   53  end
@@ -331,6 +332,13 @@ fn consume_token
 	end
 	?char '"' eq if
 		consume_string
+		1 return
+	end
+	?char 39 eq if # single quote
+		advance_char
+		CHR ?next_char push_token
+		advance_char
+		advance_char
 		1 return
 	end
 	?char '(' eq if
@@ -718,7 +726,7 @@ fn generate_global_variable
 
 	local name
 	peek_token !name
-	
+
 	?name token_get_type IDENT ne if
 		"Expected ident while generating global variable" panic
 	end
@@ -731,6 +739,15 @@ fn generate_global_variable
 	peek_token token_get_type EQ eq if # With assignment
 		advance_token
 		peek_token token_get_type NUMBER eq if
+			?name token_get_value prints
+				" dq " prints
+					peek_token token_get_value printu newline
+			advance_token
+
+			"section .text" prints newline
+			return
+		end
+		peek_token token_get_type CHR eq if
 			?name token_get_value prints
 				" dq " prints
 					peek_token token_get_value printu newline
@@ -1471,7 +1488,15 @@ fn generate_primary
 	?token token_get_type NUMBER eq if
 		"sub rcx, 8"         prints newline
 		"mov qword[rcx], "   prints
-		?token token_get_value printi
+		?token token_get_value printu
+		newline
+		advance_token
+		return
+	end
+	?token token_get_type CHR eq if
+		"sub rcx, 8"         prints newline
+		"mov qword[rcx], "   prints
+		?token token_get_value printu
 		newline
 		advance_token
 		return
@@ -1599,6 +1624,10 @@ fn get_local_index_from_top local name
 
 	local index
 	local string_pointer
+
+	&locals_len get 0 eq if # No local variables
+		-1 return
+	end
 
 	&locals_len get 1 sub !index
 

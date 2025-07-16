@@ -6,9 +6,11 @@ space reserved 1024
 let global1
 let global2 = 2
 let global3 = "Hello there"
-
+let global4 = 'i'
 
 fn main() {
+	printu(global4 == 'i');
+	prints("\n\n");
 	let i = 0;
 	while i < 10 {
 		printu(i);

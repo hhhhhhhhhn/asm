@@ -1,8 +1,6 @@
 extern printu
+extern prints
 
 fn main() {
-	loop {
-		printu(1);
-		continue;
-	}
+	prints("Hello, world\n");
 }

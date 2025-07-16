@@ -483,6 +483,61 @@ end
 fn generate_footer
 	"section .bss"      prints newline
 	"STACK resq 1024"   prints newline # Reserves the stack
+
+	generate_string_table
+end
+
+# char* -> void (writes output)
+fn generate_single_escaped_string local string
+	!string
+
+	"\"" prints
+	local ith_char
+	local i 0 !i
+	loop
+		?string ?i add get_byte !ith_char
+
+		?ith_char NULL eq if
+			break
+		end
+		?ith_char is_printable if
+			?ith_char printc
+		else
+			"\", " prints
+			?ith_char printu
+			", \"" prints
+		end
+
+		?i 1 add !i
+	end
+
+	"\", 0" prints
+end
+
+# void -> void (writes output)
+fn generate_string_table
+	"section .data" prints newline
+
+	local i 0 !i
+
+	loop
+		?i &strings_len get ge if
+			break
+		end
+
+		"STRING" prints
+		?i printu
+		" db " prints
+
+		&strings
+			?i 1024 mul
+				add
+					generate_single_escaped_string
+
+		newline
+
+		?i 1 add !i
+	end
 end
 
 # u64 (token_type) -> void (advances token_index)
@@ -943,6 +998,9 @@ fn generate_primary
 	local next_token
 	peek_2_tokens !next_token !token
 
+	?token token_get_type STRING eq if
+		generate_string
+	end
 	?token token_get_type NUMBER eq if
 		"sub rcx, 8"         prints newline
 		"mov qword[rcx], "   prints
@@ -978,6 +1036,67 @@ fn generate_primary
 		RPAREN expect_token
 		return
 	end
+end
+
+space strings 1048576 # 1024 strings, 1024 characters long
+space strings_len 8
+
+# u8 -> bool
+fn is_printable local char
+	!char
+
+	?char '!' ge
+		?char '~' le
+			band if
+				1 return
+	end
+	0 return
+end
+
+# void -> void (advances token_index, changes strings & generates output)
+fn generate_string
+	peek_token token_get_type STRING ne if
+		"Expected a string" panic
+	end
+
+	local string_index
+
+	peek_token token_get_value
+		create_string
+			!string_index
+
+	"lea rax, STRING" prints
+		?string_index printu newline
+	"sub rcx, 8" prints newline
+	"mov qword[rcx], rax" prints newline
+
+	advance_token
+end
+
+# Receives a string to save and returns its index
+# char* -> u64
+fn create_string local str
+	!str
+
+	local dst_pointer
+
+	&strings_len get 1024 ge if
+		"Only 1024 strings allowed" panic
+	end
+
+	&strings
+		&strings_len get 1024 mul
+				add !dst_pointer
+
+	?dst_pointer
+		?str
+			strcpy
+
+	&strings_len
+		&strings_len get 1 add
+			set
+
+	&strings_len get 1 sub return
 end
 
 # char* -> u64
@@ -1032,6 +1151,7 @@ fn main
 
 	# Parsing and generating (2nd pass)
 	&token_index 0 set
+	&strings_len 0 set
 
 	generate_header
 	generate_program

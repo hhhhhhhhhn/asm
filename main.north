@@ -910,6 +910,7 @@ end
 # void -> void (advances token_index & generates output)
 fn generate_assignment
 	local name
+	local local_index
 	peek_token !name
 
 	?name token_get_type IDENT ne if
@@ -921,11 +922,21 @@ fn generate_assignment
 
 	generate_expression
 
-	"mov rax, qword[rcx]" prints newline
-	"mov qword[rsp + 8*" prints
-	?name token_get_value get_local_index_from_top printu
-	"], rax" prints newline
-	"add rcx, 8" prints newline
+	?name token_get_value get_local_index_from_top !local_index
+
+	?local_index -1 eq if # Local not found
+		"mov rax, qword[rcx]" prints newline
+		"mov qword[" prints
+			?name token_get_value prints
+				"], rax" prints newline
+		"add rcx, 8" prints newline
+	else
+		"mov rax, qword[rcx]" prints newline
+		"mov qword[rsp + 8*" prints
+			?local_index printu
+				"], rax" prints newline
+		"add rcx, 8" prints newline
+	end
 end
 
 space id 8

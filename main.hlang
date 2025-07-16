@@ -20,6 +20,12 @@ fn main() {
 	printu(global2);
 	prints("\n\n")
 
+	global2 = 1
+
+	prints("global2 = ");
+	printu(global2);
+	prints("\n\n")
+
 	printu(7/2);
 	printu(7%2);
 	printu(7*2);

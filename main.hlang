@@ -1,81 +1,10 @@
 extern printu
 extern prints
+extern newline
 
-global reserved
-space reserved 1024
-let global1
-let global2 = 2
-let global3 = "Hello there"
-let global4 = 'i'
+space buffer 80000 # 4 bytes * 100 height * 200 width
 
 fn main() {
-	printu(not(0));
-	prints("\n\n");
-	let i = 0;
-	while i < 10 {
-		printu(i);
-		prints("\n");
-		i = i+1;
-	}
-
-	for (let j = 0; j < 5; j = j + 1) {
-		printu(j);
-		prints("\n");
-	}
-
-	let x = 4;
-
-	prints("x = ");
-	printu(x);
-	prints("\n");
-
-	prints("x = ");
-	printu(*(&x));
-	prints("\n");
-
-	set(&x, 3);
-	prints("x = ");
-	printu(x);
-	prints("\n");
-
-	prints("global3 = ");
-	prints(global3);
-	prints("\n");
-
-	prints("global2 = ");
-	printu(global2);
-	prints("\n");
-	prints("global2 = ");
-	printu(*(&global2));
-	prints("\n\n");
-
-	global2 = 1;
-
-	prints("global2 = ");
-	printu(global2);
-
-	prints("\n\n");
-
-	printu(&x);
-	prints("\n")
-	printu(&global1);
-	prints("\n")
-
-	prints("\n\n");
-
-	printu(7/2);
-	printu(7%2);
-	printu(7*2);
-
-	prints("\n");
-
-	if 2*7 < 10 or 0 {
-		prints("?\n")
-	}
-	elseif -(10) == -10 {
-		prints("ye\n")
-	}
-	else {
-		prints("????\n")
-	}
+	printu(0b11);
+	newline();
 }

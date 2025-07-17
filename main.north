@@ -157,14 +157,46 @@ fn consume_number
 	0 !num
 
 	local char
+	local next_char
+
+	local base
+	10 !base
+
+	peek_2_chars !next_char !char
+	?char '0' eq if
+		?next_char 'x' eq if
+			16 !base
+			advance_char
+			advance_char
+		end
+		?next_char 'o' eq if
+			8 !base
+			advance_char
+			advance_char
+		end
+		?next_char 'b' eq if
+			2 !base
+			advance_char
+			advance_char
+		end
+	end
+
 	loop
 		peek_char !char
 
 		?char is_num if
-			?num 10 mul !num
+			?num ?base mul !num
 			?num
 				?char '0' sub
 					add !num
+			advance_char
+			continue
+		end
+		?char is_alpha if
+			?num ?base mul !num
+			?num
+				?char 'a' sub
+					add 10 add !num
 			advance_char
 			continue
 		end
@@ -447,6 +479,16 @@ fn consume_token
 		GT '>' push_token
 		advance_char
 		1 return
+	end
+	?char '#' eq if # Consume comments
+		advance_char
+		loop
+			peek_char 10 eq if
+				advance_char
+				consume_token return
+			end
+			advance_char
+		end
 	end
 	?char NULL eq if
 		NULL return

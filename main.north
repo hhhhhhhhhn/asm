@@ -589,6 +589,9 @@ fn generate_header
 	"extern false"     prints newline
 	"extern not"       prints newline
 	"extern set"       prints newline
+	"extern get"       prints newline
+	"extern set_byte"  prints newline
+	"extern get_byte"  prints newline
 end
 
 # char* -> void

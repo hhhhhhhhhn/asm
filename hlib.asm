@@ -17,6 +17,29 @@ set:
 	add rcx, 8              ; Returns the pointer
 	ret
 
+global set_byte
+set_byte:
+	mov rax, qword[rcx+8]
+	mov rbx, qword[rcx]
+	mov byte[rax], bl
+	add rcx, 8              ; Returns the pointer
+	ret
+
+global get
+get:
+	mov rax, qword[rcx]
+	mov rax, qword[rax]
+	mov qword[rcx], rax
+	ret
+
+global get_byte
+get_byte:
+	mov rbx, qword[rcx]
+	mov rax, 0
+	mov al, byte[rbx]
+	mov qword[rcx], rax
+	ret
+
 global printu
 printu:
 	sub rsp, 32
@@ -35,6 +58,35 @@ printu:
 
 	add rsp, 32
 	;add rcx, 8 ; Return the same value
+	ret
+
+global syscall4
+syscall4:
+	push rcx
+	mov rax, qword[rcx + 24]
+	mov rdi, qword[rcx + 16]
+	mov rsi, qword[rcx + 8]
+	mov rdx, qword[rcx]
+	syscall
+	pop rcx
+	add rcx, 3*8
+	mov qword[rcx], rax
+	ret
+
+global syscall7
+syscall7:
+	push rcx
+	mov rax, qword[rcx + 48]
+	mov rdi, qword[rcx + 40]
+	mov rsi, qword[rcx + 32]
+	mov rdx, qword[rcx + 24]
+	mov r10, qword[rcx + 16]
+	mov r8,  qword[rcx + 8]
+	mov r9,  qword[rcx]
+	syscall
+	pop rcx
+	add rcx, 6*8
+	mov qword[rcx], rax
 	ret
 
 write_unsigned:

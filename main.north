@@ -580,9 +580,15 @@ end
 
 # void -> void (writes output)
 fn generate_header
-	"section .text"               prints newline
-	"global _start"               prints newline
-	"global STACK"                prints newline
+	"section .text"    prints newline
+	"global _start"    prints newline
+	"global STACK"     prints newline
+
+	# builtins
+	"extern true"      prints newline
+	"extern false"     prints newline
+	"extern not"       prints newline
+	"extern set"       prints newline
 end
 
 # char* -> void

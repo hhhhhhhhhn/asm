@@ -1,5 +1,22 @@
 section .text
 
+global not
+not:
+	mov rax, qword[rcx]
+	mov rdx, 0
+	cmp rax, 0
+	sete dl
+	mov qword[rcx], rdx
+	ret
+
+global set
+set:
+	mov rax, qword[rcx+8]
+	mov rbx, qword[rcx]
+	mov qword[rax], rbx
+	add rcx, 8              ; Returns the pointer
+	ret
+
 global printu
 printu:
 	sub rsp, 32
@@ -188,3 +205,7 @@ putc:
 
 section .data
 NEWLINE db 10, 0
+global true
+true dq 1
+global false
+false dq 0

@@ -1,10 +1,78 @@
 extern printu
 extern prints
+extern printc
 extern newline
+extern dumplen
+extern syscall4
 
-space buffer 80000 # 4 bytes * 100 height * 200 width
+let WIDTH = 200
+let HEIGHT = 100
+let FB_WIDTH = 1920
+let FB_HEIGHT = 1080
+space buffer 80000 # 4 bytes * 100 HEIGHT * 200 WIDTH
+space black_buffer 10000
+let buffer_len = 80000
+let BLUE = 0x0000ff00
+
+fn low_byte(x) {
+	return band(x, 0xff);
+}
+
+fn write_pixel(x, y, color) {
+	let location = &buffer + 4*(y*WIDTH + x);
+
+	set_byte(location+0, low_byte(rshift(color, 3*8)));
+	set_byte(location+1, low_byte(rshift(color, 2*8)));
+	set_byte(location+2, low_byte(rshift(color, 1*8)));
+	set_byte(location+3, low_byte(rshift(color, 0*8)));
+}
+
+fn read_pixel(x, y) {
+	let location = &buffer + 4*(y*WIDTH + x);
+
+	let r = get_byte(location+0);
+	let g = get_byte(location+1);
+	let b = get_byte(location+2);
+	let a = get_byte(location+3);
+
+	return lshift(r, 3*8) + lshift(g,2*8) + lshift(b,8) + a
+}
+
+# TODO: Optimize
+fn write_into_framebuffer() {
+#	let location;
+#	let row_location;
+#	let y;
+#	dumplen();
+#	for (y = 0; y < HEIGHT; y = y + 1) {
+#		printu(&buffer + 4*(y*WIDTH));
+#		newline();
+#		row_location = &buffer + 4*y*WIDTH;
+#		syscall4(
+#			1,            # write
+#			1,            # stdout
+#			row_location, # buffer
+#			4*WIDTH       # buffer_len
+#		);
+#		syscall4(
+#			1,                     # write
+#			1,                     # stdout
+#			&black_buffer,         # buffer
+#			4*(FB_WIDTH - WIDTH)   # buffer_len
+#		);
+#	}
+}
+
+fn main2() {
+	let x;
+	for (let y = 0; y < HEIGHT; y = y + 1) {
+		for (x = 0; x < WIDTH; x = x + 1) {
+			write_pixel(x, y, BLUE);
+		}
+	}
+	write_into_framebuffer();
+}
 
 fn main() {
-	printu(lshift(0b11, 2));
-	newline();
+	(1 + HEIGHT * WIDTH * HEIGHT);
 }

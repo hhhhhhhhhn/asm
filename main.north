@@ -945,7 +945,7 @@ fn generate_function
 
 	generate_block
 
-	"sub rcx, 8" # Push a random value, all function must return a 64 bit value
+	"sub rcx, 8" prints newline # Push a random value, all function must return a 64 bit value
 	generate_function_footer
 end
 
@@ -1465,19 +1465,18 @@ fn generate_product
 			"imul rbx"               prints newline
 			"add  rcx, 8"            prints newline
 			"mov  qword[rcx], rax"   prints newline
-			return
-		end
+		else
+			"mov  rdx, 0" prints newline
+			"idiv rbx"    prints newline
 
-		"mov  rdx, 0" prints newline
-		"idiv rbx"    prints newline
-
-		?next_token token_get_type DIVIDE eq if
-			"add  rcx, 8"            prints newline
-			"mov  qword[rcx], rax"   prints newline
-		end
-		?next_token token_get_type MODULO eq if
-			"add  rcx, 8"            prints newline
-			"mov  qword[rcx], rdx"   prints newline
+			?next_token token_get_type DIVIDE eq if
+				"add  rcx, 8"            prints newline
+				"mov  qword[rcx], rax"   prints newline
+			end
+			?next_token token_get_type MODULO eq if
+				"add  rcx, 8"            prints newline
+				"mov  qword[rcx], rdx"   prints newline
+			end
 		end
 	end
 end
@@ -1518,7 +1517,7 @@ fn generate_argument_list
 		peek_token token_get_type COMMA eq
 			peek_token token_get_type RPAREN eq
 				bor not if
-					"Expected , or )" panic
+					"Expected , or ) while generating argument list" panic
 		end
 
 		peek_token token_get_type COMMA eq if

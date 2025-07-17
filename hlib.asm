@@ -106,6 +106,19 @@ printu:
 	;add rcx, 8 ; Return the same value
 	ret
 
+global printc
+printc:
+	push rcx
+	lea rsi, qword[rcx]
+	mov rdx, 1
+	mov rax, 1 ; syscall write
+	mov rdi, 1 ; stdout
+	syscall
+
+	pop rcx
+	;add rcx, 8 ; Return the same value
+	ret
+
 global syscall4
 syscall4:
 	push rcx

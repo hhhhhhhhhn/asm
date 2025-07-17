@@ -40,6 +40,52 @@ get_byte:
 	mov qword[rcx], rax
 	ret
 
+global lshift
+lshift:
+	push rcx
+	mov rax, qword[rcx+8]
+	mov rcx, qword[rcx]
+	shl rax, cl
+	pop rcx
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+global rshift
+rshift:
+	push rcx
+	mov rax, qword[rcx+8]
+	mov rcx, qword[rcx]
+	shr rax, cl
+	pop rcx
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+global band
+band:
+	mov rax, qword[rcx+8]
+	and rax, qword[rcx]
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+global bor
+bor:
+	mov rax, qword[rcx+8]
+	or rax, qword[rcx]
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
+global bxor
+bxor:
+	mov rax, qword[rcx+8]
+	xor rax, qword[rcx]
+	add rcx, 8
+	mov qword[rcx], rax
+	ret
+
 global printu
 printu:
 	sub rsp, 32

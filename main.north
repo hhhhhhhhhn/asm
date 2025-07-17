@@ -634,6 +634,10 @@ fn generate_header
 	"extern get"       prints newline
 	"extern set_byte"  prints newline
 	"extern get_byte"  prints newline
+	"extern lshift"    prints newline
+	"extern rshift"    prints newline
+	"extern band"      prints newline
+	"extern bor"       prints newline
 end
 
 # char* -> void

@@ -569,16 +569,20 @@ fn advance_token
 end
 
 # void -> void (writes output)
-fn generate_header
-	"section .text"               prints newline
-	"global _start"               prints newline
-	"global STACK"                prints newline
+fn generate_start
 	"_start:"                     prints newline
 	"lea rcx, [STACK+1024*8]"     prints newline  # Loads stack pointer to rcx (rcx will always be the stack pointer)
 	"call main"                   prints newline
 	"mov rax, 60"                 prints newline  # Exists with error code 0
 	"mov rdi, 0"                  prints newline
 	"syscall"                     prints newline
+end
+
+# void -> void (writes output)
+fn generate_header
+	"section .text"               prints newline
+	"global _start"               prints newline
+	"global STACK"                prints newline
 end
 
 # char* -> void
@@ -824,6 +828,10 @@ fn generate_function
 	?name token_get_type IDENT ne if
 		"SYNTAX ERROR: Expected ident"
 	end
+	?name token_get_value "main" streq if
+		generate_start
+	end
+
 	advance_token
 
 

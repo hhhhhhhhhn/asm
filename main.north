@@ -889,12 +889,14 @@ fn generate_function
 
 	advance_token
 
-
 	?name token_get_value prints
 	":" prints newline
 
 	"push rbp"     prints newline
 	"mov rbp, rsp" prints newline
+
+	"jmp .locals" prints newline
+	".body:" prints newline
 
 	LPAREN expect_token # TODO: Parameters
 
@@ -934,9 +936,9 @@ fn generate_function
 
 		"mov rax, qword[rcx]" prints newline
 
-		"mov qword[rsp + 8*" prints
-		?i printu
-		"], rax" prints newline
+		"mov qword[rbp - 8*" prints
+			?parameter_count ?i sub printu
+				"], rax" prints newline
 
 		"add rcx, 8" prints newline
 
@@ -947,6 +949,11 @@ fn generate_function
 
 	"sub rcx, 8" prints newline # Push a random value, all function must return a 64 bit value
 	generate_function_footer
+
+	".locals:" prints newline
+	"sub rsp, 8*" prints
+		&locals_len get printu newline
+	"jmp .body" prints newline
 end
 
 fn generate_block
@@ -988,8 +995,6 @@ fn create_local local local_name
 	&locals_len
 		&locals_len get 1 add
 			set
-
-	"sub rsp, 8" prints newline
 end
 
 # void -> void (advances token_index, changes locals & generates output)
@@ -1075,7 +1080,7 @@ fn generate_assignment
 
 	generate_expression
 
-	?name token_get_value get_local_index_from_top !local_index
+	?name token_get_value get_local_index !local_index
 
 	?local_index -1 eq if # Local not found
 		"mov rax, qword[rcx]" prints newline
@@ -1085,8 +1090,8 @@ fn generate_assignment
 		"add rcx, 8" prints newline
 	else
 		"mov rax, qword[rcx]" prints newline
-		"mov qword[rsp + 8*" prints
-			?local_index printu
+		"mov qword[rbp - 8*" prints
+			?local_index 1 add printu
 				"], rax" prints newline
 		"add rcx, 8" prints newline
 	end
@@ -1571,7 +1576,7 @@ fn generate_primary
 			return
 		end
 
-		?token token_get_value get_local_index_from_top !local_index
+		?token token_get_value get_local_index !local_index
 
 		?local_index -1 eq if # No such local variable, assume a global
 			"mov rax, qword[" prints
@@ -1581,8 +1586,8 @@ fn generate_primary
 			"mov qword[rcx], rax" prints newline
 		else
 			"sub rcx, 8" prints newline
-			"mov rax, qword[rsp + 8*" prints
-				?local_index printu
+			"mov rax, qword[rbp - 8*" prints
+				?local_index 1 add printu
 					"]" prints newline
 			"mov qword[rcx], rax" prints newline
 		end
@@ -1593,7 +1598,7 @@ fn generate_primary
 		?next_token token_get_type IDENT ne if
 			"Expected ident when generating pointer" panic
 		end
-		?next_token token_get_value get_local_index_from_top !local_index
+		?next_token token_get_value get_local_index !local_index
 
 		?local_index -1 eq if
 			"mov rax, " prints
@@ -1601,8 +1606,8 @@ fn generate_primary
 			"sub rcx, 8" prints newline
 			"mov qword[rcx], rax" prints newline
 		else
-			"mov rax, rsp + 8*" prints
-				?local_index printu newline
+			"mov rax, rbp - 8*" prints
+				?local_index 1 add printu newline
 			"sub rcx, 8" prints newline
 			"mov qword[rcx], rax" prints newline
 		end
@@ -1681,32 +1686,30 @@ end
 
 # Returns -1 if not found
 # char* -> u64
-fn get_local_index_from_top local name
+fn get_local_index local name
 	!name
 
 	local index
 	local string_pointer
 
-	&locals_len get 0 eq if # No local variables
-		-1 return
-	end
-
-	&locals_len get 1 sub !index
+	0 !index
 
 	loop
+		?index
+			&locals_len get
+				ge if
+					-1 return
+		end
+
 		&locals
 			?index 64 mul
 					add !string_pointer
 
 		?string_pointer ?name streq if
-			&locals_len get ?index sub 1 sub return
+			?index return
 		end
 
-		?index 0 eq if
-			-1 return
-		end
-
-		?index 1 sub !index
+		?index 1 add !index
 	end
 end
 

@@ -1,5 +1,6 @@
 extern dumplen
 extern syscall4
+extern printu
 
 let WIDTH = 400
 let HEIGHT = 200
@@ -95,13 +96,11 @@ fn sleep() {
 }
 
 fn frame(t) {
-	let x;
-	let y;
-	for (y = 0; y < HEIGHT; y = y + 1) {
-		for (x = 0; x < t; x = x + 1) {
+	for (let y = 0; y < HEIGHT; y = y + 1) {
+		for (let x = 0; x < t; x = x + 1) {
 			write_pixel(x, y, BLUE);
 		};
-		for (x = t; x < WIDTH; x = x + 1) {
+		for (let x = t; x < WIDTH; x = x + 1) {
 			write_pixel(x, y, MAGENTA);
 		}
 	}

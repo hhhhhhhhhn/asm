@@ -1,17 +1,14 @@
-extern printu
-extern prints
-extern printc
-extern newline
 extern dumplen
 extern syscall4
 
-let WIDTH = 200
-let HEIGHT = 100
+let WIDTH = 400
+let HEIGHT = 200
 let FB_WIDTH = 1920
 let FB_HEIGHT = 1080
-space buffer 80000 # 4 bytes * 100 HEIGHT * 200 WIDTH
+space buffer 320000 # 4 bytes * 100 HEIGHT * 200 WIDTH
 space black_buffer 10000
-let buffer_len = 80000
+let buffer_len = 320000
+let MAGENTA = 0xff00ff00
 let BLUE = 0x0000ff00
 
 fn low_byte(x) {
@@ -21,58 +18,100 @@ fn low_byte(x) {
 fn write_pixel(x, y, color) {
 	let location = &buffer + 4*(y*WIDTH + x);
 
-	set_byte(location+0, low_byte(rshift(color, 3*8)));
+	set_byte(location+0, low_byte(rshift(color, 1*8)));
 	set_byte(location+1, low_byte(rshift(color, 2*8)));
-	set_byte(location+2, low_byte(rshift(color, 1*8)));
+	set_byte(location+2, low_byte(rshift(color, 3*8)));
 	set_byte(location+3, low_byte(rshift(color, 0*8)));
 }
 
 fn read_pixel(x, y) {
 	let location = &buffer + 4*(y*WIDTH + x);
 
-	let r = get_byte(location+0);
-	let g = get_byte(location+1);
-	let b = get_byte(location+2);
-	let a = get_byte(location+3);
+	let a = get_byte(location+0);
+	let b = get_byte(location+1);
+	let g = get_byte(location+2);
+	let r = get_byte(location+3);
 
 	return lshift(r, 3*8) + lshift(g,2*8) + lshift(b,8) + a
 }
 
 # TODO: Optimize
 fn write_into_framebuffer() {
-#	let location;
-#	let row_location;
-#	let y;
-#	dumplen();
-#	for (y = 0; y < HEIGHT; y = y + 1) {
-#		printu(&buffer + 4*(y*WIDTH));
-#		newline();
-#		row_location = &buffer + 4*y*WIDTH;
-#		syscall4(
-#			1,            # write
-#			1,            # stdout
-#			row_location, # buffer
-#			4*WIDTH       # buffer_len
-#		);
-#		syscall4(
-#			1,                     # write
-#			1,                     # stdout
-#			&black_buffer,         # buffer
-#			4*(FB_WIDTH - WIDTH)   # buffer_len
-#		);
-#	}
-}
-
-fn main2() {
-	let x;
-	for (let y = 0; y < HEIGHT; y = y + 1) {
-		for (x = 0; x < WIDTH; x = x + 1) {
-			write_pixel(x, y, BLUE);
+	let framebuffer_fd = open_for_writing("/dev/fb0");
+	let location;
+	let row_location;
+	let y;
+	for (y = 0; y < FB_HEIGHT; y = y + 1) {
+		if (y < HEIGHT) {
+			row_location = &buffer + 4*y*WIDTH;
+			syscall4(
+				1,              # write
+				framebuffer_fd, # stdout
+				row_location,   # buffer
+				4*WIDTH         # buffer_len
+			);
+			syscall4(
+				1,                     # write
+				framebuffer_fd,        # stdout
+				&black_buffer,         # buffer
+				4*(FB_WIDTH - WIDTH)   # buffer_len
+			);
+		} else {
+			syscall4(
+				1,                     # write
+				framebuffer_fd,        # stdout
+				&black_buffer,         # buffer
+				4*FB_WIDTH             # buffer_len
+			);
 		}
 	}
-	write_into_framebuffer();
+	close(framebuffer_fd);
+}
+
+space timespec 16
+
+fn open_for_writing(filename) {
+	return syscall4(
+		2,    # open
+		filename,
+		577,  # O_WRONLY | O_CREAT | O_TRUNC
+		0770 # Mode
+	)
+}
+
+fn close(fd) {
+	syscall4(
+		3,  #close
+		fd,
+		0,  #padding
+		0
+	)
+}
+
+fn sleep() {
+	set(&timespec, 0);           #seconds
+	set(&timespec+8, 100_000_000); #nanoseconds
+	syscall4(35, &timespec, 0);
+}
+
+fn frame(t) {
+	let x;
+	let y;
+	for (y = 0; y < HEIGHT; y = y + 1) {
+		for (x = 0; x < t; x = x + 1) {
+			write_pixel(x, y, BLUE);
+		};
+		for (x = t; x < WIDTH; x = x + 1) {
+			write_pixel(x, y, MAGENTA);
+		}
+	}
 }
 
 fn main() {
-	(1 + HEIGHT * WIDTH * HEIGHT);
+	let t;
+	let middle = 0;
+	for(let t = 0; t <= WIDTH; t = t + 1) {
+		frame(t);
+		write_into_framebuffer();
+	}
 }

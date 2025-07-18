@@ -246,6 +246,7 @@ dumplen:
 	mov qword[rcx], rbx
 	call printu
 	call newline
+	add rcx, 8
 	ret
 
 dump_rax:
@@ -292,7 +293,7 @@ newline:
 	lea rax, NEWLINE
 	mov qword[rcx], rax
 	call prints
-	add rcx, 8
+	;add rcx, 8 # Return random value
 	ret
 
 putc:

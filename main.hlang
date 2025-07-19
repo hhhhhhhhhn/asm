@@ -1,6 +1,7 @@
 extern dumplen
 extern syscall4
 extern printu
+extern prints
 
 let WIDTH = 400
 let HEIGHT = 200
@@ -10,7 +11,20 @@ space buffer 320000 # 4 bytes * 100 HEIGHT * 200 WIDTH
 space black_buffer 10000
 let buffer_len = 320000
 let MAGENTA = 0xff00ff00
-let BLUE = 0x0000ff00
+let SKY  =   0xff55aa00
+let SKY2 =   0x3333aa00
+let BLUE =   0x0000ff00
+let DBLUE1 = 0x0000dd00
+let DBLUE2 = 0x0000cc00
+let DBLUE3 = 0x0000bb00
+let DBLUE4 = 0x0000aa00
+let LBLUE1 = 0x5555ff00
+let LBLUE2 = 0xaaaaff00
+let GREEN =  0x00ff0000
+let BLACK =  0x00000000
+let SAND =  0xffff6600
+let SUN =  0xffffaa00
+let CLOUDS =  0xffffaa00
 
 fn low_byte(x) {
 	return band(x, 0xff);
@@ -18,6 +32,9 @@ fn low_byte(x) {
 
 fn write_pixel(x, y, color) {
 	let location = &buffer + 4*(y*WIDTH + x);
+	if not(location > &buffer and location + 4 < &buffer + buffer_len) {
+		return 0
+	}
 
 	set_byte(location+0, low_byte(rshift(color, 1*8)));
 	set_byte(location+1, low_byte(rshift(color, 2*8)));
@@ -89,27 +106,120 @@ fn close(fd) {
 	)
 }
 
-fn sleep() {
-	set(&timespec, 0);           #seconds
-	set(&timespec+8, 100_000_000); #nanoseconds
-	syscall4(35, &timespec, 0);
+fn sleep(miliseconds) {
+	set(&timespec, miliseconds/1000);                 #seconds
+	set(&timespec+8, 1_000_000 * (miliseconds%1000)); #nanoseconds
+	syscall4(35, &timespec, 0, 0);
+}
+
+fn draw_rectangle(x1, y1, x2, y2, color) {
+	for(let y = y1; y < y2; y = y+1) {
+		for(let x = x1; x < x2; x = x+1) {
+			write_pixel(x, y, color);
+		}
+	}
+}
+
+fn draw_circle(x0, y0, r, color) {
+	for (let y = y0 - r; y < y0 + r; y = y + 1) {
+		for (let x = x0 - r; x < x0 + r; x = x + 1) {
+			if (x-x0)*(x-x0)+(y-y0)*(y-y0) <= r*r {
+				write_pixel(x,y,color);
+			}
+		}
+	}
+}
+
+fn draw_circle_above(x0, y0, r, cutoff, color) {
+	for (let y = y0 - r; y < cutoff; y = y + 1) {
+		for (let x = x0 - r; x < x0 + r; x = x + 1) {
+			if (x-x0)*(x-x0)+(y-y0)*(y-y0) <= r*r {
+				write_pixel(x,y,color);
+			}
+		}
+	}
+}
+
+fn swap(a, b) {
+	let temp = *a;
+	set(a, *b);
+	set(b, temp);
+}
+
+fn absolute_value(x) {
+	if x < 0 {
+		return -x;
+	}
+	return x;
+}
+
+fn triangle_wave(x) {
+	return absolute_value((x % 100) - 50);
+}
+
+# Values from -100 to 100, with period 200
+fn wierd_wave(x) {
+	return (triangle_wave(x)
+		+ triangle_wave(x + 10)
+		+ triangle_wave(x + 20)
+		+ triangle_wave(x + 30)
+		+ triangle_wave(x + 40)
+		+ triangle_wave(x + 50) - 90) * 5/3 - 50
+}
+
+fn draw_sine(height, color) {
+	for(let x = 0; x < WIDTH; x = x+1) {
+		let y_max = (height*40 + wierd_wave(x*2))/40
+		for (let y = 0; y < y_max; y = y+1) {
+			write_pixel(x, y, color);
+		}
+	}
+}
+
+fn draw_line(x1, y1, x2, y2, color) {
+	if (x2 < x1) {
+		draw_line(x2, y2, x1, y1, color);
+		return 0;
+	}
+	for(let x = x1; x < x2; x = x + 1) {
+		let y = (y2 - y1)*(x - x1)/(x2 - x1) + y1;
+		write_pixel(x, y, color);
+	}
 }
 
 fn frame(t) {
 	for (let y = 0; y < HEIGHT; y = y + 1) {
-		for (let x = 0; x < t; x = x + 1) {
-			write_pixel(x, y, BLUE);
+		for (let x = 0; x < WIDTH; x = x + 1) {
+			write_pixel(x, y, SAND);
 		};
-		for (let x = t; x < WIDTH; x = x + 1) {
-			write_pixel(x, y, MAGENTA);
-		}
 	}
+
+	# Waves
+	draw_sine(wierd_wave((t+000)/10)/10 + 70 + 50, LBLUE2);
+	draw_sine(wierd_wave((t+070)/10)/10 + 70 + 45, LBLUE1);
+	draw_sine(wierd_wave((t+140)/10)/10 + 70 + 40, BLUE);
+	draw_sine(wierd_wave((t+210)/10)/10 + 70 + 35, DBLUE1);
+	draw_sine(wierd_wave((t+280)/10)/10 + 70 + 30, DBLUE2);
+	draw_sine(wierd_wave((t+350)/10)/10 + 70 + 25, DBLUE3);
+	draw_sine(wierd_wave((t+420)/10)/10 + 70 + 20, DBLUE4);
+
+	# Sky
+	draw_rectangle(0, 0, 400, 60, SKY);
+	draw_rectangle(0, 60, 400, 62, SKY2);
+
+	draw_line(10, 10, 15, 5, BLACK);
+	draw_line(15, 5,  20, 10, BLACK);
+	draw_line(20, 10, 25, 5, BLACK);
+	draw_line(25, 5,  30, 10, BLACK);
+
+
+	draw_circle_above(200, t/200 - 40, 40, 60, SUN);
 }
 
 fn main() {
 	let t;
 	let middle = 0;
-	for(let t = 0; t <= WIDTH; t = t + 1) {
+	for(let t = 0; true; t = t + 1) {
 		frame(t);
 		write_into_framebuffer();
 	}

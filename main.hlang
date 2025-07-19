@@ -21,10 +21,11 @@ let DBLUE4 = 0x0000aa00
 let LBLUE1 = 0x5555ff00
 let LBLUE2 = 0xaaaaff00
 let GREEN =  0x00ff0000
+let DGREEN = 0x00990000
 let BLACK =  0x00000000
-let SAND =  0xffff6600
-let SUN =  0xffffaa00
-let CLOUDS =  0xffffaa00
+let SAND =   0xffff6600
+let SUN =    0xffffaa00
+let CLOUDS = 0xffffaa00
 
 fn low_byte(x) {
 	return band(x, 0xff);
@@ -181,13 +182,164 @@ fn draw_line(x1, y1, x2, y2, color) {
 		draw_line(x2, y2, x1, y1, color);
 		return 0;
 	}
-	for(let x = x1; x < x2; x = x + 1) {
-		let y = (y2 - y1)*(x - x1)/(x2 - x1) + y1;
-		write_pixel(x, y, color);
+	let last_y = y1;
+	for(let x = x1; x <= x2; x = x + 1) {
+		let new_y = (y2 - y1)*(x - x1)/(x2 - x1) + y1;
+		let ymin = min2(last_y, new_y);
+		let ymax = max2(last_y, new_y);
+		for(let y = ymin; y <= ymax; y = y + 1) {
+			write_pixel(x, y, color);
+		}
+		last_y = new_y;
 	}
 }
 
+fn draw_bird(x, y) {
+	draw_line(x,   y+3, x+3,  y,   BLACK);
+	draw_line(x+3, y,   x+6,  y+3, BLACK);
+	draw_line(x+6, y+3, x+9,  y,   BLACK);
+	draw_line(x+9, y,   x+12, y+3, BLACK);
+}
+
+fn triangle_area(x1, y1, x2, y2, x3, y3) {
+	return absolute_value(x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2))/2
+}
+
+fn is_inside_triangle(x, y, x1, y1, x2, y2, x3, y3) {
+	let area  = triangle_area(x1, y1, x2, y2, x3, y3)
+	let area1 = triangle_area(x,  y,  x2, y2, x3, y3)
+	let area2 = triangle_area(x1, y1, x,  y,  x3, y3)
+	let area3 = triangle_area(x1, y1, x2, y2, x,  y )
+
+	return area > area1 + area2 + area3 - 2 and area < area1 + area2 + area3 + 2
+}
+
+fn min3(x, y, z) {
+	let min = x;
+	if (y < min) {
+		min = y;
+	}
+	if (z < min) {
+		min = z;
+	}
+	return min
+}
+
+fn max3(x, y, z) {
+	let max = x;
+	if (y > max) {
+		max = y;
+	}
+	if (z > max) {
+		max = z;
+	}
+	return max
+}
+
+fn draw_triangle(x1, y1, x2, y2, x3, y3, color) {
+	let x_min = min3(x1, x2, x3);
+	let x_max = max3(x1, x2, x3);
+	let y_min = min3(y1, y2, y3);
+	let y_max = max3(y1, y2, y3);
+
+	for (let y = y_min; y <= y_max; y = y + 1) {
+		for (let x = x_min; x <= x_max; x = x + 1) {
+			if (is_inside_triangle(x, y, x1, y1, x2, y2, x3, y3)) {
+				write_pixel(x, y, color);
+			}
+		}
+	}
+}
+
+space vertices 512
+let vertices_len = 0
+
+fn vx(index) {
+	return *(&vertices + 16*(index % vertices_len));
+}
+
+fn vy(index) {
+	return *(&vertices + 16*(index % vertices_len)+8);
+}
+
+fn remove_vertex(index) {
+	let index = index % vertices_len;
+	for(let i = index+1; i < vertices_len; i = i + 1) {
+		set(&vertices + 16*(i - 1),     *(&vertices + 16*i    ));
+		set(&vertices + 16*(i - 1) + 8, *(&vertices + 16*i + 8));
+	}
+	vertices_len = vertices_len - 1;
+}
+
+space vertices_copy 512
+fn draw_polygon_with_border(color, bordercolor) {
+	let vertices_len_copy = vertices_len;
+	for(let i = 0; i < vertices_len; i = i + 1) {
+		set(&vertices_copy + 16*i,     *(&vertices + 16*i    ));
+		set(&vertices_copy + 16*i + 8, *(&vertices + 16*i + 8));
+	}
+	draw_polygon(color);
+	vertices_len = vertices_len_copy
+	for(let i = 0; i < vertices_len; i = i + 1) {
+		set(&vertices + 16*i,     *(&vertices_copy + 16*i    ));
+		set(&vertices + 16*i + 8, *(&vertices_copy + 16*i + 8));
+	}
+	for(let i = 0; i < vertices_len - 1; i = i + 1) {
+		draw_line(vx(i), vy(i), vx(i + 1), vy(i + 1), bordercolor);
+	}
+	draw_line(vx(0), vy(0), vx(vertices_len - 1), vy(vertices_len - 1), bordercolor);
+}
+
+fn draw_polygon(color) {
+	while (vertices_len >= 3) {
+		if vertices_len == 3 {
+			draw_triangle(vx(0), vy(0), vx(1), vy(1), vx(2), vy(2), color)
+			vertices_len = 0
+			return 0
+		}
+		for (let i = 0; i < vertices_len; i = i + 1) {
+			let is_ear = true
+			for (let j = 0; j < vertices_len; j = j + 1) {
+				if (j % vertices_len) == (i % vertices_len)
+					or (j % vertices_len) == ((i+1) % vertices_len)
+					or (j % vertices_len) == ((i+2) % vertices_len) {
+						continue
+				}
+				if is_inside_triangle(vx(j), vy(j), vx(i), vy(i), vx(i+1), vy(i+1), vx(i+2), vy(i+2)) {
+					is_ear = false
+					break
+				}
+			}
+			if is_ear {
+				draw_triangle(vx(i), vy(i), vx(i+1), vy(i+1), vx(i+2), vy(i+2), color)
+				remove_vertex(i+1);
+				break
+			}
+		}
+	}
+}
+
+fn push_vertex(x, y) {
+	set(&vertices + vertices_len*16, x);
+	set(&vertices + vertices_len*16 + 8, y);
+	vertices_len = vertices_len + 1;
+}
+
+fn max2(a, b) {
+	if a > b {
+		return a
+	}
+	return b
+}
+fn min2(a, b) {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 fn frame(t) {
+	let t = t*2
 	for (let y = 0; y < HEIGHT; y = y + 1) {
 		for (let x = 0; x < WIDTH; x = x + 1) {
 			write_pixel(x, y, SAND);
@@ -207,13 +359,23 @@ fn frame(t) {
 	draw_rectangle(0, 0, 400, 60, SKY);
 	draw_rectangle(0, 60, 400, 62, SKY2);
 
-	draw_line(10, 10, 15, 5, BLACK);
-	draw_line(15, 5,  20, 10, BLACK);
-	draw_line(20, 10, 25, 5, BLACK);
-	draw_line(25, 5,  30, 10, BLACK);
+	# Sun
+	draw_circle_above(200, (t/200 % 200) - 40, 40, 60, SUN);
 
+	# Birds
+	draw_bird(t/20 - 10, 10 + wierd_wave(t/20 + 10)/20);
+	draw_bird(t/20 - 30, 10 + wierd_wave(t/20 + 30)/20);
+	draw_bird(t/20 - 50, 10 + wierd_wave(t/20 + 80)/20);
 
-	draw_circle_above(200, t/200 - 40, 40, 60, SUN);
+	# Elephant
+	push_vertex(10, 10);
+	push_vertex(40, 10);
+	push_vertex(50, 50);
+	push_vertex(40, 60);
+	push_vertex(20, 50);
+	draw_polygon_with_border(DGREEN, BLACK);
+	vertices_len = 0;
+	#draw_triangle(30, 60, 20, 5, 10, 20, DGREEN);
 }
 
 fn main() {

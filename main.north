@@ -1180,6 +1180,10 @@ fn generate_loop
 		?id printu
 			"start:" prints newline
 
+	".loop" prints
+		?id printu
+			"continue:" prints newline
+
 	generate_block
 
 	"jmp .loop" prints
@@ -1212,6 +1216,10 @@ fn generate_while
 	".loop" prints
 		?id printu
 			"start:" prints newline
+
+	".loop" prints
+		?id printu
+			"continue:" prints newline
 
 	generate_expression
 
@@ -1274,6 +1282,9 @@ fn generate_for
 			"body" prints newline
 	".loop" prints
 		?id printu
+			"continue:" prints newline
+	".loop" prints
+		?id printu
 			"post:" prints newline
 
 	generate_block_statement  # i = i + 1
@@ -1321,7 +1332,7 @@ fn generate_continue
 
 	"jmp .loop" prints
 		?id printu
-			"start" prints newline
+			"continue" prints newline
 end
 
 # void -> void (advances token_index & generates output)

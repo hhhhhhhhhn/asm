@@ -2,6 +2,7 @@ extern dumplen
 extern syscall4
 extern printu
 extern prints
+extern newline
 
 let WIDTH = 400
 let HEIGHT = 200
@@ -26,6 +27,7 @@ let BLACK =  0x00000000
 let SAND =   0xffff6600
 let SUN =    0xffffaa00
 let CLOUDS = 0xffffaa00
+let SANDSHADOW = 0xcccc3300
 
 fn low_byte(x) {
 	return band(x, 0xff);
@@ -181,6 +183,14 @@ fn draw_line(x1, y1, x2, y2, color) {
 	if (x2 < x1) {
 		draw_line(x2, y2, x1, y1, color);
 		return 0;
+	} elseif (x2 == x1){
+		if (y2 < y1) {
+			swap(&y1, &y2);
+		}
+		for (let y = y1; y <= y2; y = y + 1) {
+			write_pixel(x1, y, color);
+		}
+		return 0;
 	}
 	let last_y = y1;
 	for(let x = x1; x <= x2; x = x + 1) {
@@ -202,16 +212,16 @@ fn draw_bird(x, y) {
 }
 
 fn triangle_area(x1, y1, x2, y2, x3, y3) {
-	return absolute_value(x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2))/2
+	return absolute_value(x1*(y2-y3) + x2*(y3-y1) + x3*(y1-y2)) # /2 not necessary
 }
 
 fn is_inside_triangle(x, y, x1, y1, x2, y2, x3, y3) {
-	let area  = triangle_area(x1, y1, x2, y2, x3, y3)
-	let area1 = triangle_area(x,  y,  x2, y2, x3, y3)
-	let area2 = triangle_area(x1, y1, x,  y,  x3, y3)
-	let area3 = triangle_area(x1, y1, x2, y2, x,  y )
+	let area  = triangle_area(x1, y1, x2, y2, x3, y3);
+	let area1 = triangle_area(x,  y,  x2, y2, x3, y3);
+	let area2 = triangle_area(x1, y1, x,  y,  x3, y3);
+	let area3 = triangle_area(x1, y1, x2, y2, x,  y );
 
-	return area > area1 + area2 + area3 - 2 and area < area1 + area2 + area3 + 2
+	return area > area1 + area2 + area3 - 3 and area < area1 + area2 + area3 + 3;
 }
 
 fn min3(x, y, z) {
@@ -288,6 +298,7 @@ fn draw_polygon_with_border(color, bordercolor) {
 		draw_line(vx(i), vy(i), vx(i + 1), vy(i + 1), bordercolor);
 	}
 	draw_line(vx(0), vy(0), vx(vertices_len - 1), vy(vertices_len - 1), bordercolor);
+	vertices_len = 0;
 }
 
 fn draw_polygon(color) {
@@ -367,15 +378,102 @@ fn frame(t) {
 	draw_bird(t/20 - 30, 10 + wierd_wave(t/20 + 30)/20);
 	draw_bird(t/20 - 50, 10 + wierd_wave(t/20 + 80)/20);
 
-	# Elephant
-	push_vertex(10, 10);
-	push_vertex(40, 10);
-	push_vertex(50, 50);
-	push_vertex(40, 60);
-	push_vertex(20, 50);
+	# Elephant shadow
+	push_vertex( 71, 162);
+	push_vertex( 88, 161);
+	push_vertex( 74, 187);
+	push_vertex( 47, 190);
+	draw_polygon(SANDSHADOW);
+
+	push_vertex(102, 183);
+	push_vertex(120, 158);
+	push_vertex(132, 158);
+	push_vertex(121, 199);
+	push_vertex(41,  199);
+	push_vertex(49,  186);
+	draw_polygon(SANDSHADOW);
+
+	# Elephant Leg 1
+	push_vertex( 79, 132);
+	push_vertex( 82, 129);
+	push_vertex( 89, 129);
+	push_vertex( 93, 142);
+	push_vertex( 88, 162);
+	push_vertex( 87, 163);
+	push_vertex( 82, 163);
+	push_vertex( 81, 162);
 	draw_polygon_with_border(DGREEN, BLACK);
-	vertices_len = 0;
-	#draw_triangle(30, 60, 20, 5, 10, 20, DGREEN);
+
+	# Elephant Leg 4
+	push_vertex(121, 130);
+	push_vertex(124, 127);
+	push_vertex(131, 127);
+	push_vertex(135, 140);
+	push_vertex(130, 160);
+	push_vertex(129, 161);
+	push_vertex(124, 161);
+	push_vertex(123, 160);
+	draw_polygon_with_border(DGREEN, BLACK);
+
+	# Elephant Body
+	push_vertex( 61, 158);
+	push_vertex( 57, 158);
+	push_vertex( 54, 131);
+	push_vertex( 53, 130);
+	push_vertex( 58, 116);
+	push_vertex( 71, 107);
+	push_vertex( 89, 112);
+	push_vertex(125, 113);
+	push_vertex(138, 131);
+	push_vertex(136, 132);
+	push_vertex(125, 118);
+	push_vertex(130, 129);
+	push_vertex(128, 136);
+	push_vertex(122, 142);
+	push_vertex( 95, 144);
+	push_vertex( 72, 142);
+	push_vertex( 68, 137);
+	push_vertex( 68, 132);
+	push_vertex( 63, 132);
+	draw_polygon_with_border(DGREEN, BLACK);
+
+	# Elephant Ear
+	draw_line(70, 111, 79, 121, BLACK);
+	draw_line(79, 121, 78, 127, BLACK);
+	draw_line(78, 127, 72, 129, BLACK);
+
+	# Elephant Horn
+	push_vertex( 51, 126);
+	push_vertex( 66, 127);
+	push_vertex( 67, 132);
+	draw_polygon_with_border(SUN, BLACK);
+
+	# Elephant eye
+	draw_circle( 63, 120, 2, BLACK);
+	write_pixel( 63, 120, SUN);
+
+	# Elephant Leg 3
+	push_vertex( 69, 135);
+	push_vertex( 72, 132);
+	push_vertex( 79, 132);
+	push_vertex( 83, 145);
+	push_vertex( 78, 165);
+	push_vertex( 77, 166);
+	push_vertex( 72, 166);
+	push_vertex( 71, 165);
+	draw_polygon_with_border(DGREEN, BLACK);
+
+	# Elephant Leg 4
+	push_vertex(114, 135);
+	push_vertex(117, 132);
+	push_vertex(124, 132);
+	push_vertex(128, 145);
+	push_vertex(123, 165);
+	push_vertex(122, 166);
+	push_vertex(117, 166);
+	push_vertex(116, 165);
+	draw_polygon_with_border(DGREEN, BLACK);
+
 }
 
 fn main() {

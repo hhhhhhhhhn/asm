@@ -1,3 +1,5 @@
+NOTE: This was scratched
+
 struct name {
 	a: type
 	b: type
